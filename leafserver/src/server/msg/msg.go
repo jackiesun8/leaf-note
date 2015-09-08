@@ -11,5 +11,9 @@ var (
 )
 
 func init() {
+	JSONProcessor.Register(&Hello{})
+}
 
+type Hello struct {
+	Name string
 }

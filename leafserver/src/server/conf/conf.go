@@ -2,7 +2,7 @@ package conf
 
 var (
 	// gate conf
-	Encoding               = "json" // "json" or "protobuf"
+	Encoding               = "json" // 编码方式定义，"json" or "protobuf"
 	PendingWriteNum        = 2000
 	LenMsgLen              = 2
 	MinMsgLen       uint32 = 2

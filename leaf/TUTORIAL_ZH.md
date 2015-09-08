@@ -65,11 +65,11 @@ git clone https://github.com/name5566/leafserver
 ```
 
 设置 leafserver 目录到 GOPATH 后获取相关依赖：
-
+命令行执行export GOPATH=leafserver的目录
 ```
-go get github.com/name5566/leaf
-go get github.com/golang/protobuf/proto
-go get gopkg.in/mgo.v2
+go get github.com/name5566/leaf(leaf核心框架)
+go get github.com/golang/protobuf/proto(通讯协议protobuf golang实现)
+go get gopkg.in/mgo.v2(mongodb driver golang实现)
 ```
 
 编译 LeafServer：
@@ -136,8 +136,8 @@ type Hello struct {
 package gate
 
 import (
-	"server/game"
-	"server/msg"
+	"server/game" //绝对路径放入，即加载$GOPATH/src/server/game模块
+	"server/msg" //同上
 )
 
 func init() {
