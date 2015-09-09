@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+//骨架类型定义
 type Skeleton struct {
 	GoLen              int
 	TimerDispatcherLen int

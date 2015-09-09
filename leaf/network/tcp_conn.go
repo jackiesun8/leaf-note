@@ -6,8 +6,10 @@ import (
 	"sync"
 )
 
+//连接集合
 type ConnSet map[net.Conn]struct{}
 
+//TCP连接类型定义
 type TCPConn struct {
 	sync.Mutex
 	conn      net.Conn
@@ -16,9 +18,10 @@ type TCPConn struct {
 	msgParser *MsgParser
 }
 
+//新建TCP连接
 func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *TCPConn {
-	tcpConn := new(TCPConn)
-	tcpConn.conn = conn
+	tcpConn := new(TCPConn) //创建一个TCP连接实例
+	tcpConn.conn = conn     //
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
 	tcpConn.msgParser = msgParser
 
@@ -92,6 +95,7 @@ func (tcpConn *TCPConn) Write(b []byte) {
 	tcpConn.doWrite(b)
 }
 
+//实现io.Reader接口
 func (tcpConn *TCPConn) Read(b []byte) (int, error) {
 	return tcpConn.conn.Read(b)
 }
