@@ -11,12 +11,15 @@ import (
 )
 
 // levels
+//日志级别定义
 const (
-	debugLevel   = 0
-	releaseLevel = 1
-	errorLevel   = 2
-	fatalLevel   = 3
+	debugLevel   = 0 //非关键日志
+	releaseLevel = 1 //关键日志
+	errorLevel   = 2 //错误日志
+	fatalLevel   = 3 //致命错误日志。Fatal 日志比较特殊，每次输出 Fatal 日志之后游戏服务器进程就会结束
 )
+
+//Debug < Release < Error < Fatal（日志级别高低）
 
 const (
 	printDebugLevel   = "[debug  ] "
@@ -25,16 +28,17 @@ const (
 	printFatalLevel   = "[fatal  ] "
 )
 
+//Logger定义
 type Logger struct {
-	level      int
-	baseLogger *log.Logger
-	baseFile   *os.File
+	level      int         //日志级别
+	baseLogger *log.Logger //基于go的log包
+	baseFile   *os.File    //日志写入的文件
 }
 
-func New(strLevel string, pathname string) (*Logger, error) {
+func New(strLevel string, pathname string) (*Logger, error) { //logger创建函数
 	// level
 	var level int
-	switch strings.ToLower(strLevel) {
+	switch strings.ToLower(strLevel) { //根据传入的日志级别，设置日志级别
 	case "debug":
 		level = debugLevel
 	case "release":

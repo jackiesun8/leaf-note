@@ -9,10 +9,10 @@ import (
 	"os/signal"
 )
 
-func Run(mods ...module.Module) {
+func Run(mods ...module.Module) { //...不定参数语法，参数类型都为module.Module
 	// logger
-	if conf.LogLevel != "" {
-		logger, err := log.New(conf.LogLevel, conf.LogPath)
+	if conf.LogLevel != "" { //日志级别不为空
+		logger, err := log.New(conf.LogLevel, conf.LogPath) //创建一个logger
 		if err != nil {
 			panic(err)
 		}
@@ -20,11 +20,11 @@ func Run(mods ...module.Module) {
 		defer logger.Close()
 	}
 
-	log.Release("Leaf starting up")
+	log.Release("Leaf starting up") //关键日志
 
 	// module
-	for i := 0; i < len(mods); i++ {
-		module.Register(mods[i])
+	for i := 0; i < len(mods); i++ { //遍历传入的所有module
+		module.Register(mods[i]) //注册module
 	}
 	module.Init()
 
