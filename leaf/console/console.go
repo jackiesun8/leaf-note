@@ -40,9 +40,11 @@ type Agent struct {
 }
 
 //创建代理函数定义
+//传入TCP连接封装
+//返回满足network.Agent接口的对象
 func newAgent(conn *network.TCPConn) network.Agent {
-	a := new(Agent)                  //新建代理
-	a.conn = conn                    //保存TCP连接
+	a := new(Agent)                  //新建代理(定义在上面)
+	a.conn = conn                    //保存TCP连接封装
 	a.reader = bufio.NewReader(conn) //新建reader(带缓冲)
 	return a
 }
@@ -50,7 +52,7 @@ func newAgent(conn *network.TCPConn) network.Agent {
 //实现代理接口(network.Agent)Run函数
 func (a *Agent) Run() {
 	for { //死循环
-		if conf.ConsolePrompt != "" {
+		if conf.ConsolePrompt != "" { //
 			a.conn.Write([]byte(conf.ConsolePrompt))
 		}
 

@@ -7,40 +7,40 @@ import (
 )
 
 //连接集合
-type ConnSet map[net.Conn]struct{}
+type ConnSet map[net.Conn]struct{} //值为空结构体
 
 //TCP连接类型定义
 type TCPConn struct {
-	sync.Mutex
-	conn      net.Conn
-	writeChan chan []byte
-	closeFlag bool
-	msgParser *MsgParser
+	sync.Mutex             //匿名字段
+	conn       net.Conn    //底层连接
+	writeChan  chan []byte //发送缓冲
+	closeFlag  bool        //关闭标志
+	msgParser  *MsgParser  //消息解析器
 }
 
 //新建TCP连接
 func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *TCPConn {
-	tcpConn := new(TCPConn) //创建一个TCP连接实例
-	tcpConn.conn = conn     //
-	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
-	tcpConn.msgParser = msgParser
+	tcpConn := new(TCPConn)                                //创建一个TCP连接实例
+	tcpConn.conn = conn                                    //保存底层连接
+	tcpConn.writeChan = make(chan []byte, pendingWriteNum) //创建发送缓冲区
+	tcpConn.msgParser = msgParser                          //保存消息解析器
 
-	go func() {
-		for b := range tcpConn.writeChan {
-			if b == nil {
-				break
+	go func() { //在一个新的goroutine中做发送数据工作
+		for b := range tcpConn.writeChan { //如果发送缓冲区被关闭，此循环会自动结束（结束阻塞），如果没有数据，会阻塞在这里
+			if b == nil { //如果收到的值为nil，而不是字节切片
+				break //中断循环
 			}
 
-			_, err := conn.Write(b)
-			if err != nil {
-				break
+			_, err := conn.Write(b) //发送数据
+			if err != nil {         //发生错误
+				break //中断循环
 			}
 		}
-
-		conn.Close()
-		tcpConn.Lock()
-		tcpConn.closeFlag = true
-		tcpConn.Unlock()
+		//清理工作
+		conn.Close()             //关闭底层连接
+		tcpConn.Lock()           //加锁
+		tcpConn.closeFlag = true //设置关闭标志
+		tcpConn.Unlock()         //解锁
 	}()
 
 	return tcpConn
@@ -64,14 +64,14 @@ func (tcpConn *TCPConn) Destroy() {
 }
 
 func (tcpConn *TCPConn) Close() {
-	tcpConn.Lock()
-	defer tcpConn.Unlock()
-	if tcpConn.closeFlag {
-		return
+	tcpConn.Lock()         //上锁
+	defer tcpConn.Unlock() //延迟解锁(保证Close执行结束前解锁)
+	if tcpConn.closeFlag { //如果已经设置了关闭标志
+		return //直接返回
 	}
 
 	tcpConn.doWrite(nil)
-	tcpConn.closeFlag = true
+	tcpConn.closeFlag = true //设置关闭标志
 }
 
 func (tcpConn *TCPConn) doWrite(b []byte) {
