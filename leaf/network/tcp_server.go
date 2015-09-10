@@ -78,10 +78,11 @@ func (server *TCPServer) run() {
 		server.mutexConns.Lock()                    //加锁，为什么要加锁，因为会从不同的goroutine中访问server.conns,比如从外部goroutine中调用server.Close或者在新的goroutine中运行代理执行清理工作的时候或者当前for循环所在goroutine中增加连接记录
 		if len(server.conns) >= server.MaxConnNum { //如果当前连接数超过上限
 			server.mutexConns.Unlock()        //解锁
-			conn.Close()                      //关闭TCP服务器
+			conn.Close()                      //关闭新来的连接
 			log.Debug("too many connections") //日志记录：太多连接了
 			continue                          //继续循环
 		}
+		//增加连接记录
 		server.conns[conn] = struct{}{} //struct{}为类型，第二个{}为初始化，只不过是空值而已
 		server.mutexConns.Unlock()      //解锁
 

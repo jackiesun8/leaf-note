@@ -6,7 +6,7 @@ var (
 	LogLevel string //日志级别
 	LogPath  string //日志路径
 
-	ConsolePort   int    //控制台端口，默认不开启
-	ConsolePrompt string = "Leaf# "
-	ProfilePath   string
+	ConsolePort   int               //控制台端口，默认不开启
+	ConsolePrompt string = "Leaf# " //控制台提示符
+	ProfilePath   string            //profile路径
 )

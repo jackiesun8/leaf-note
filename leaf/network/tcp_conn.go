@@ -75,43 +75,48 @@ func (tcpConn *TCPConn) Close() {
 }
 
 func (tcpConn *TCPConn) doWrite(b []byte) {
-	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) {
-		log.Debug("close conn: channel full")
-		tcpConn.doDestroy()
+	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) { //如果发送缓冲区的长度等于最大容量
+		log.Debug("close conn: channel full") //日志记录，管道已满
+		tcpConn.doDestroy()                   //做销毁操作
 		return
 	}
 
-	tcpConn.writeChan <- b
+	tcpConn.writeChan <- b //将待发数据发送到发送缓冲区
 }
 
 // b must not be modified by other goroutines
 func (tcpConn *TCPConn) Write(b []byte) {
-	tcpConn.Lock()
-	defer tcpConn.Unlock()
-	if tcpConn.closeFlag || b == nil {
-		return
+	tcpConn.Lock()                     //加锁
+	defer tcpConn.Unlock()             //延迟解锁
+	if tcpConn.closeFlag || b == nil { //如果连接已关闭或者传入的b为空
+		return //返回
 	}
 
-	tcpConn.doWrite(b)
+	tcpConn.doWrite(b) //做具体的发送操作
 }
 
 //实现io.Reader接口
+//将被bufio封装
 func (tcpConn *TCPConn) Read(b []byte) (int, error) {
-	return tcpConn.conn.Read(b)
+	return tcpConn.conn.Read(b) //调用底层conn读取数据
 }
 
+//返回本地地址
 func (tcpConn *TCPConn) LocalAddr() net.Addr {
 	return tcpConn.conn.LocalAddr()
 }
 
+//返回远程(客户端)地址
 func (tcpConn *TCPConn) RemoteAddr() net.Addr {
 	return tcpConn.conn.RemoteAddr()
 }
 
+//读取消息
 func (tcpConn *TCPConn) ReadMsg() ([]byte, error) {
-	return tcpConn.msgParser.Read(tcpConn)
+	return tcpConn.msgParser.Read(tcpConn) //使用消息解析器读取
 }
 
+//发送消息
 func (tcpConn *TCPConn) WriteMsg(args ...[]byte) error {
-	return tcpConn.msgParser.Write(tcpConn, args...)
+	return tcpConn.msgParser.Write(tcpConn, args...) //使用消息解析器发送
 }
