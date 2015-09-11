@@ -12,7 +12,7 @@ import (
 // --------------
 //消息解析器类型定义
 type MsgParser struct {
-	lenMsgLen    int    //消息长度的长度(上图len)
+	lenMsgLen    int    //消息长度占用字节数
 	minMsgLen    uint32 //最小消息长度
 	maxMsgLen    uint32 //最大消息长度
 	littleEndian bool   //是否是小端
@@ -69,93 +69,99 @@ func (p *MsgParser) SetByteOrder(littleEndian bool) {
 // goroutine safe
 //读取消息
 func (p *MsgParser) Read(conn *TCPConn) ([]byte, error) {
-	var b [4]byte
-	bufMsgLen := b[:p.lenMsgLen]
+	var b [4]byte                //先声明一个4字节切片
+	bufMsgLen := b[:p.lenMsgLen] //根据消息长度占用字节数重新取得对应长度的切片
 
 	// read len
-	if _, err := io.ReadFull(conn, bufMsgLen); err != nil {
+	if _, err := io.ReadFull(conn, bufMsgLen); err != nil { //读取消息长度
 		return nil, err
 	}
 
 	// parse len
+	//解析长度
 	var msgLen uint32
 	switch p.lenMsgLen {
 	case 1:
-		msgLen = uint32(bufMsgLen[0])
+		msgLen = uint32(bufMsgLen[0]) //长度一个字节
 	case 2:
 		if p.littleEndian {
-			msgLen = uint32(binary.LittleEndian.Uint16(bufMsgLen))
+			msgLen = uint32(binary.LittleEndian.Uint16(bufMsgLen)) //长度两个字节小端
 		} else {
-			msgLen = uint32(binary.BigEndian.Uint16(bufMsgLen))
+			msgLen = uint32(binary.BigEndian.Uint16(bufMsgLen)) //长度两个字节大端
 		}
 	case 4:
 		if p.littleEndian {
-			msgLen = binary.LittleEndian.Uint32(bufMsgLen)
+			msgLen = binary.LittleEndian.Uint32(bufMsgLen) //长度四个字节小端
 		} else {
-			msgLen = binary.BigEndian.Uint32(bufMsgLen)
+			msgLen = binary.BigEndian.Uint32(bufMsgLen) //长度四个字节大端
 		}
 	}
 
 	// check len
-	if msgLen > p.maxMsgLen {
+	//检查长度
+	if msgLen > p.maxMsgLen { //超过了最大长度
 		return nil, errors.New("message too long")
-	} else if msgLen < p.minMsgLen {
+	} else if msgLen < p.minMsgLen { //小于最小长度
 		return nil, errors.New("message too short")
 	}
 
 	// data
-	msgData := make([]byte, msgLen)
-	if _, err := io.ReadFull(conn, msgData); err != nil {
+	msgData := make([]byte, msgLen)                       //创建对应长度的字节切片
+	if _, err := io.ReadFull(conn, msgData); err != nil { //读取数据
 		return nil, err
 	}
 
-	return msgData, nil
+	return msgData, nil //返回读取的数据
 }
 
 // goroutine safe
 //发送消息
-func (p *MsgParser) Write(conn *TCPConn, args ...[]byte) error {
+func (p *MsgParser) Write(conn *TCPConn, args ...[]byte) error { //传入多个字节切片
 	// get len
+	//计算长度
 	var msgLen uint32
-	for i := 0; i < len(args); i++ {
-		msgLen += uint32(len(args[i]))
+	for i := 0; i < len(args); i++ { //遍历所有字节切片
+		msgLen += uint32(len(args[i])) //累加长度
 	}
 
 	// check len
-	if msgLen > p.maxMsgLen {
+	// 检查长度
+	if msgLen > p.maxMsgLen { //超过了最大长度
 		return errors.New("message too long")
-	} else if msgLen < p.minMsgLen {
+	} else if msgLen < p.minMsgLen { //小于最小长度
 		return errors.New("message too short")
 	}
 
-	msg := make([]byte, uint32(p.lenMsgLen)+msgLen)
+	msg := make([]byte, uint32(p.lenMsgLen)+msgLen) //创建len+len(data)长度的字节切片
 
 	// write len
+	//写入长度
 	switch p.lenMsgLen {
 	case 1:
-		msg[0] = byte(msgLen)
+		msg[0] = byte(msgLen) //一个字节
 	case 2:
 		if p.littleEndian {
-			binary.LittleEndian.PutUint16(msg, uint16(msgLen))
+			binary.LittleEndian.PutUint16(msg, uint16(msgLen)) //两个字节小端
 		} else {
-			binary.BigEndian.PutUint16(msg, uint16(msgLen))
+			binary.BigEndian.PutUint16(msg, uint16(msgLen)) //两个字节大端
 		}
 	case 4:
 		if p.littleEndian {
-			binary.LittleEndian.PutUint32(msg, msgLen)
+			binary.LittleEndian.PutUint32(msg, msgLen) //四个字节小端
 		} else {
-			binary.BigEndian.PutUint32(msg, msgLen)
+			binary.BigEndian.PutUint32(msg, msgLen) //四个字节大端
 		}
 	}
 
 	// write data
+	//写入数据
 	l := p.lenMsgLen
-	for i := 0; i < len(args); i++ {
-		copy(msg[l:], args[i])
-		l += len(args[i])
+	for i := 0; i < len(args); i++ { //遍历所有字节切片
+		copy(msg[l:], args[i]) //拷贝数据
+		l += len(args[i])      //游标
 	}
 
-	conn.Write(msg)
+	conn.Write(msg) //发送数据
 
 	return nil
 }

@@ -46,23 +46,26 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, msgParser *MsgParser) *TCPCo
 	return tcpConn
 }
 
+//做销毁操作
 func (tcpConn *TCPConn) doDestroy() {
-	tcpConn.conn.(*net.TCPConn).SetLinger(0)
-	tcpConn.conn.Close()
-	close(tcpConn.writeChan)
-	tcpConn.closeFlag = true
+	tcpConn.conn.(*net.TCPConn).SetLinger(0) //丢弃所有的数据
+	tcpConn.conn.Close()                     //关闭底层连接
+	close(tcpConn.writeChan)                 //关闭发送缓冲区，也会导致发送goroutine中断
+	tcpConn.closeFlag = true                 //设置关闭标记
 }
 
+//销毁
 func (tcpConn *TCPConn) Destroy() {
-	tcpConn.Lock()
-	defer tcpConn.Unlock()
-	if tcpConn.closeFlag {
-		return
+	tcpConn.Lock()         //加锁
+	defer tcpConn.Unlock() //延迟解锁
+	if tcpConn.closeFlag { //已经设置了关闭标志，不需要销毁了
+		return //返回
 	}
 
-	tcpConn.doDestroy()
+	tcpConn.doDestroy() //做销毁操作
 }
 
+//关闭连接
 func (tcpConn *TCPConn) Close() {
 	tcpConn.Lock()         //上锁
 	defer tcpConn.Unlock() //延迟解锁(保证Close执行结束前解锁)
@@ -70,10 +73,11 @@ func (tcpConn *TCPConn) Close() {
 		return //直接返回
 	}
 
-	tcpConn.doWrite(nil)
+	tcpConn.doWrite(nil)     //发送一个nil到发送缓冲区，导致发送goroutine中断循环，做清理工作
 	tcpConn.closeFlag = true //设置关闭标志
 }
 
+//做写操作
 func (tcpConn *TCPConn) doWrite(b []byte) {
 	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) { //如果发送缓冲区的长度等于最大容量
 		log.Debug("close conn: channel full") //日志记录，管道已满
@@ -85,6 +89,7 @@ func (tcpConn *TCPConn) doWrite(b []byte) {
 }
 
 // b must not be modified by other goroutines
+//写入数据
 func (tcpConn *TCPConn) Write(b []byte) {
 	tcpConn.Lock()                     //加锁
 	defer tcpConn.Unlock()             //延迟解锁

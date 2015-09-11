@@ -228,11 +228,11 @@ func (c *CommandProf) run(args []string) string {
 	if err != nil {         //出错
 		return err.Error() //返回错误信息
 	}
-	defer f.Close() //延迟关闭文件
-	err = p.WriteTo(f, 0)
-	if err != nil {
-		return err.Error()
+	defer f.Close()       //延迟关闭文件
+	err = p.WriteTo(f, 0) //写入文件
+	if err != nil {       //写入文件出错
+		return err.Error() //返回出错信息
 	}
 
-	return fn
+	return fn //返回文件名
 }

@@ -14,18 +14,21 @@ import (
 // -------------------------
 // | id | protobuf message |
 // -------------------------
+//处理器类型定义
 type Processor struct {
 	littleEndian bool
 	msgInfo      []*MsgInfo
 	msgID        map[reflect.Type]uint16
 }
 
+//消息信息类型定义
 type MsgInfo struct {
 	msgType    reflect.Type
 	msgRouter  *chanrpc.Server
 	msgHandler MsgHandler
 }
 
+//消息处理函数定义
 type MsgHandler func([]interface{})
 
 func NewProcessor() *Processor {

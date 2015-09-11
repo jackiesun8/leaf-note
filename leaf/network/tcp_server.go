@@ -91,7 +91,7 @@ func (server *TCPServer) run() {
 		tcpConn := newTCPConn(conn, server.PendingWriteNum, server.msgParser) //创建一个TCP连接(原有net.Conn的封装)
 		agent := server.NewAgent(tcpConn)                                     //调用注册的创建代理函数创建代理
 		go func() {                                                           //此处形成闭包
-			agent.Run() //在一个新的goroutine中运行代理
+			agent.Run() //在一个新的goroutine中运行代理，一个客户端一个agent
 			//执行到这里时agent.Run for循环结束
 			// cleanup
 			//清理工作
@@ -113,7 +113,7 @@ func (server *TCPServer) Close() {
 	server.ln.Close()       //关闭监听器,导致再Accept时出错
 
 	server.mutexConns.Lock()            //加锁
-	for conn, _ := range server.conns { //遍历现有连接
+	for conn, _ := range server.conns { //遍历现有连接,则会导致所有agent循环读取数据时异常，退出循环
 		conn.Close() //关闭连接(底层)
 	}
 	server.conns = make(ConnSet) //重置连接集合

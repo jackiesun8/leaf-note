@@ -60,6 +60,7 @@ func run(m *module) {
 	m.wg.Done()          //等待goroutine数减1
 }
 
+//销毁模块
 func destroy(m *module) {
 	defer func() { //延迟执行
 		if r := recover(); r != nil { //捕获异常
@@ -73,5 +74,5 @@ func destroy(m *module) {
 		}
 	}()
 
-	m.mi.OnDestroy() //先调用模块的销毁函数
+	m.mi.OnDestroy() //先调用模块的销毁函数，再执行上面的延迟函数
 }
