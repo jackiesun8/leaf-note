@@ -9,6 +9,7 @@ import (
 
 // one server per goroutine (goroutine not safe)
 // one client per goroutine (goroutine not safe)
+//rpc服务器定义
 type Server struct {
 	// id -> function
 	//
@@ -16,10 +17,11 @@ type Server struct {
 	// func(args []interface{})
 	// func(args []interface{}) interface{}
 	// func(args []interface{}) []interface{}
-	functions map[interface{}]interface{}
-	ChanCall  chan *CallInfo
+	functions map[interface{}]interface{} //id->func映射
+	ChanCall  chan *CallInfo              //管道调用（用于传递调用信息）
 }
 
+//调用信息
 type CallInfo struct {
 	f       interface{}
 	args    []interface{}
@@ -27,6 +29,7 @@ type CallInfo struct {
 	cb      interface{}
 }
 
+//返回信息
 type RetInfo struct {
 	// nil
 	// interface{}
@@ -40,6 +43,7 @@ type RetInfo struct {
 	cb interface{}
 }
 
+//rpc客户端定义
 type Client struct {
 	s               *Server
 	chanSyncRet     chan *RetInfo
@@ -47,30 +51,33 @@ type Client struct {
 	pendingAsynCall int
 }
 
+//创建服务器函数
 func NewServer(l int) *Server {
-	s := new(Server)
-	s.functions = make(map[interface{}]interface{})
-	s.ChanCall = make(chan *CallInfo, l)
+	s := new(Server)                                //创建服务器
+	s.functions = make(map[interface{}]interface{}) //id->func映射
+	s.ChanCall = make(chan *CallInfo, l)            //创建管道，用于传递调用信息
 	return s
 }
 
 // you must call the function before calling Open and Go
+//注册f(函数)
 func (s *Server) Register(id interface{}, f interface{}) {
-	switch f.(type) {
-	case func([]interface{}):
-	case func([]interface{}) interface{}:
-	case func([]interface{}) []interface{}:
+	switch f.(type) { //判断f的类型
+	case func([]interface{}): //参数是切片，值任意。无返回值
+	case func([]interface{}) interface{}: //参数是切片，值任意。返回值为一个任意值
+	case func([]interface{}) []interface{}: //参数是切片，返回值也是切片，值均为任意
 	default:
-		panic(fmt.Sprintf("function id %v: definition of function is invalid", id))
+		panic(fmt.Sprintf("function id %v: definition of function is invalid", id)) //id对应的函数定义非法
 	}
 
-	if _, ok := s.functions[id]; ok {
+	if _, ok := s.functions[id]; ok { //判断映射是否存在
 		panic(fmt.Sprintf("function id %v: already registered", id))
 	}
 
-	s.functions[id] = f
+	s.functions[id] = f //存储映射
 }
 
+//返回
 func (s *Server) ret(ci *CallInfo, ri *RetInfo) (err error) {
 	if ci.chanRet == nil {
 		return
@@ -87,6 +94,7 @@ func (s *Server) ret(ci *CallInfo, ri *RetInfo) (err error) {
 	return
 }
 
+//执行
 func (s *Server) Exec(ci *CallInfo) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -135,6 +143,7 @@ func (s *Server) Go(id interface{}, args ...interface{}) {
 	}
 }
 
+//关闭
 func (s *Server) Close() {
 	close(s.ChanCall)
 
@@ -146,14 +155,16 @@ func (s *Server) Close() {
 }
 
 // goroutine safe
+//打开
 func (s *Server) Open(l int) *Client {
-	c := new(Client)
-	c.s = s
-	c.chanSyncRet = make(chan *RetInfo, 1)
-	c.ChanAsynRet = make(chan *RetInfo, l)
-	return c
+	c := new(Client)                       //创建一个rpc客户端
+	c.s = s                                //保存rpc服务器引用
+	c.chanSyncRet = make(chan *RetInfo, 1) //创建一个管道用于传输同步返回信息
+	c.ChanAsynRet = make(chan *RetInfo, l) //创建一个管道用于传输异步返回信息
+	return c                               //返回rpc客户端
 }
 
+//调用
 func (c *Client) call(ci *CallInfo, block bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -174,13 +185,16 @@ func (c *Client) call(ci *CallInfo, block bool) (err error) {
 }
 
 func (c *Client) f(id interface{}, n int) (f interface{}, err error) {
-	f = c.s.functions[id]
+	f = c.s.functions[id] //根据id取得对应的f
+
+	//函数f未注册
 	if f == nil {
 		err = fmt.Errorf("function id %v: function not registered", id)
 		return
 	}
 
 	var ok bool
+	//根据n的值判断f类型是否正确
 	switch n {
 	case 0:
 		_, ok = f.(func([]interface{}))
@@ -192,12 +206,15 @@ func (c *Client) f(id interface{}, n int) (f interface{}, err error) {
 		panic("bug")
 	}
 
+	//类型不匹配
 	if !ok {
 		err = fmt.Errorf("function id %v: return type mismatch", id)
 	}
 	return
 }
 
+//调用0
+//适合参数是切片，值任意。无返回值
 func (c *Client) Call0(id interface{}, args ...interface{}) error {
 	f, err := c.f(id, 0)
 	if err != nil {
@@ -217,6 +234,8 @@ func (c *Client) Call0(id interface{}, args ...interface{}) error {
 	return ri.err
 }
 
+//调用1
+//适合参数是切片，值任意。返回值为一个任意值
 func (c *Client) Call1(id interface{}, args ...interface{}) (interface{}, error) {
 	f, err := c.f(id, 1)
 	if err != nil {
@@ -236,6 +255,8 @@ func (c *Client) Call1(id interface{}, args ...interface{}) (interface{}, error)
 	return ri.ret, ri.err
 }
 
+//调用N
+//适合参数是切片，返回值也是切片，值均为任意
 func (c *Client) CallN(id interface{}, args ...interface{}) ([]interface{}, error) {
 	f, err := c.f(id, 2)
 	if err != nil {

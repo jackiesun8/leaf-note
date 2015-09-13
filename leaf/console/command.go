@@ -34,9 +34,9 @@ type Command interface {
 
 //外部命令类型定义
 type ExternalCommand struct {
-	_name  string
-	_help  string
-	server *chanrpc.Server
+	_name  string          // 命令名
+	_help  string          //帮助信息
+	server *chanrpc.Server //rpc服务器
 }
 
 //返回命令名字
@@ -51,11 +51,12 @@ func (c *ExternalCommand) help() string {
 
 //执行命令
 func (c *ExternalCommand) run(_args []string) string {
-	args := make([]interface{}, len(_args))
+	args := make([]interface{}, len(_args)) //创建等长切片存储参数（接收任意类型的数据）
+	//存储参数
 	for i, v := range _args {
 		args[i] = v
 	}
-
+	//
 	ret, err := c.server.Open(0).Call1(c._name, args...)
 	if err != nil {
 		return err.Error()
@@ -72,19 +73,20 @@ func (c *ExternalCommand) run(_args []string) string {
 // goroutine not safe
 // 注册命令
 func Register(name string, help string, f interface{}, server *chanrpc.Server) {
+	//判断命令是否存在
 	for _, c := range commands {
 		if c.name() == name {
 			log.Fatal("command %v is already registered", name)
 		}
 	}
-
+	//注册f（函数）
 	server.Register(name, f)
 
-	c := new(ExternalCommand)
-	c._name = name
-	c._help = help
-	c.server = server
-	commands = append(commands, c)
+	c := new(ExternalCommand)      //创建一个外部命令
+	c._name = name                 //保存命令名字
+	c._help = help                 //保存命令帮助
+	c.server = server              //保存命令服务（一个rpc服务器）
+	commands = append(commands, c) //添加命令到命令列表中
 }
 
 // help

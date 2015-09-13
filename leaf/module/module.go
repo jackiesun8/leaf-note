@@ -47,16 +47,16 @@ func Init() {
 func Destroy() {
 	for i := len(mods) - 1; i >= 0; i-- { //遍历所有注册的模块(反序，从后往前)
 		m := mods[i]       //取得对应索引的模块
-		m.closeSig <- true //向管道发送关闭信号
-		m.wg.Wait()        //等待所有goroutine执行完成
-		destroy(m)         //销毁模块
+		m.closeSig <- true //向管道发送关闭信号(导致Run内的死循环介绍，继续执行到m.wg.Done() 60行)
+		m.wg.Wait()        //等待该模块所在goroutine执行完成
+		destroy(m)         //销毁该模块
 	}
 }
 
 //运行模块函数定义
 func run(m *module) {
 	m.wg.Add(1)          //等待goroutine数加1
-	m.mi.Run(m.closeSig) //调用模块的Run函数
+	m.mi.Run(m.closeSig) //调用模块的Run函数(skeleton内实现，一个死循环)
 	m.wg.Done()          //等待goroutine数减1
 }
 

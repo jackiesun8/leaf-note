@@ -25,7 +25,7 @@ type Processor struct {
 type MsgInfo struct {
 	msgType    reflect.Type
 	msgRouter  *chanrpc.Server
-	msgHandler MsgHandler
+	msgHandler MsgHandlerq
 }
 
 //消息处理函数定义
