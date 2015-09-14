@@ -11,36 +11,40 @@ import (
 
 //骨架类型定义
 type Skeleton struct {
-	GoLen              int
-	TimerDispatcherLen int
-	ChanRPCServer      *chanrpc.Server
-	g                  *g.Go
-	dispatcher         *timer.Dispatcher
-	server             *chanrpc.Server
-	commandServer      *chanrpc.Server
+	GoLen              int               //Go管道长度
+	TimerDispatcherLen int               //定时器分发器管道长度
+	ChanRPCServer      *chanrpc.Server   //RPC服务器引用（外部传入）
+	g                  *g.Go             //leaf的Go机制
+	dispatcher         *timer.Dispatcher //定时器分发器
+	server             *chanrpc.Server   //RPC服务器引用(内部引用)
+	commandServer      *chanrpc.Server   //命令RPC服务器引用
 }
 
+//初始化
 func (s *Skeleton) Init() {
+	//检查Go管道长度
 	if s.GoLen <= 0 {
 		s.GoLen = 0
 	}
+	//检查定时器分发器管道长度
 	if s.TimerDispatcherLen <= 0 {
 		s.TimerDispatcherLen = 0
 	}
 
-	s.g = g.New(s.GoLen)
-	s.dispatcher = timer.NewDispatcher(s.TimerDispatcherLen)
-	s.server = s.ChanRPCServer
+	s.g = g.New(s.GoLen)                                     //创建Go
+	s.dispatcher = timer.NewDispatcher(s.TimerDispatcherLen) //创建分发器
+	s.server = s.ChanRPCServer                               //外部传入的，内部引用
 
-	if s.server == nil {
-		s.server = chanrpc.NewServer(0)
+	if s.server == nil { //外部传入的为空
+		s.server = chanrpc.NewServer(0) //内部创建一个
 	}
-	s.commandServer = chanrpc.NewServer(0)
+	s.commandServer = chanrpc.NewServer(0) //创建命令RPC服务器
 }
 
+//实现了Module接口的Run方法
 func (s *Skeleton) Run(closeSig chan bool) {
-	for {
-		select {
+	for { //死循环
+		select { //
 		case <-closeSig:
 			s.commandServer.Close()
 			s.server.Close()

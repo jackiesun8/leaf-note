@@ -5,6 +5,6 @@ import (
 )
 
 var (
-	Module  = new(internal.Module)
-	ChanRPC = internal.ChanRPC
+	Module  = new(internal.Module) //创建模块
+	ChanRPC = internal.ChanRPC     //引用RPC服务器
 )

@@ -8,10 +8,12 @@ import (
 	"server/msg"
 )
 
+//处理消息
 func handleMsg(m interface{}, h interface{}) {
-	skeleton.RegisterChanRPC(reflect.TypeOf(m), h)
+	skeleton.RegisterChanRPC(reflect.TypeOf(m), h) //注册管道RPC
 }
 
+//初始化
 func init() {
 	handleMsg(&msg.C2S_Auth{}, handleAuth)
 }

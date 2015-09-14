@@ -6,18 +6,21 @@ import (
 )
 
 var (
-	skeleton = base.NewSkeleton()
-	ChanRPC  = skeleton.ChanRPCServer
+	skeleton = base.NewSkeleton()     //创建骨架
+	ChanRPC  = skeleton.ChanRPCServer //引用骨架中的RPC服务器
 )
 
+//模型类型定义
 type Module struct {
-	*module.Skeleton
+	*module.Skeleton //骨架引用
 }
 
+//初始化
 func (m *Module) OnInit() {
-	m.Skeleton = skeleton
+	m.Skeleton = skeleton //保存骨架
 }
 
+//销毁
 func (m *Module) OnDestroy() {
 
 }

@@ -6,12 +6,13 @@ import (
 	"server/conf"
 )
 
+//创建骨架
 func NewSkeleton() *module.Skeleton {
-	skeleton := &module.Skeleton{
+	skeleton := &module.Skeleton{ //创建骨架
 		GoLen:              conf.GoLen,
 		TimerDispatcherLen: conf.TimerDispatcherLen,
 		ChanRPCServer:      chanrpc.NewServer(conf.ChanRPCLen),
 	}
-	skeleton.Init()
-	return skeleton
+	skeleton.Init() //初始化骨架
+	return skeleton //返回骨架
 }

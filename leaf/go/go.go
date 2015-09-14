@@ -9,16 +9,19 @@ import (
 )
 
 // one Go per goroutine (goroutine not safe)
+//Go类型定义
 type Go struct {
-	ChanCb    chan func()
-	pendingGo int
+	ChanCb    chan func() //回调管道，传输函数
+	pendingGo int         //
 }
 
+//线性Go类型定义
 type LinearGo struct {
 	f  func()
 	cb func()
 }
 
+//线性上下文类型定义
 type LinearContext struct {
 	g              *Go
 	linearGo       *list.List
@@ -26,6 +29,7 @@ type LinearContext struct {
 	mutexExecution sync.Mutex
 }
 
+//
 func New(l int) *Go {
 	g := new(Go)
 	g.ChanCb = make(chan func(), l)
