@@ -56,7 +56,7 @@ func (c *ExternalCommand) run(_args []string) string {
 	for i, v := range _args {
 		args[i] = v
 	}
-	//
+	//创建rpc客户端，发起调用
 	ret, err := c.server.Open(0).Call1(c._name, args...)
 	if err != nil {
 		return err.Error()

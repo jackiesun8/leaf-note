@@ -23,31 +23,31 @@ type Server struct {
 
 //调用信息
 type CallInfo struct {
-	f       interface{}
-	args    []interface{}
-	chanRet chan *RetInfo
-	cb      interface{}
+	f       interface{}   //函数
+	args    []interface{} //参数
+	chanRet chan *RetInfo //返回值管道，用于传输返回值
+	cb      interface{}   //回调
 }
 
 //返回信息
 type RetInfo struct {
-	// nil
-	// interface{}
-	// []interface{}
-	ret interface{}
-	err error
-	// callback:
-	// func(err error)
-	// func(ret interface{}, err error)
-	// func(ret []interface{}, err error)
-	cb interface{}
+	// nil，无返回值
+	// interface{}，一个任意返回值
+	// []interface{}，多个任意返回值
+	ret interface{} //返回值
+	err error       //错误
+	// callback:回调均带error
+	// func(err error)，无返回值
+	// func(ret interface{}, err error)，一个返回值
+	// func(ret []interface{}, err error)，多个返回值
+	cb interface{} //回调
 }
 
 //rpc客户端定义
 type Client struct {
-	s               *Server
-	chanSyncRet     chan *RetInfo
-	ChanAsynRet     chan *RetInfo
+	s               *Server       //rpc服务器引用
+	chanSyncRet     chan *RetInfo //同步返回信息
+	ChanAsynRet     chan *RetInfo //异步返回信息
 	pendingAsynCall int
 }
 
@@ -164,17 +164,18 @@ func (s *Server) Open(l int) *Client {
 	return c                               //返回rpc客户端
 }
 
-//调用
+//发起调用
 func (c *Client) call(ci *CallInfo, block bool) (err error) {
+	//捕获异常
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
 		}
 	}()
 
-	if block {
-		c.s.ChanCall <- ci
-	} else {
+	if block { //阻塞的。当管道满时，阻塞
+		c.s.ChanCall <- ci //将调用消息通过管道传输到rpc服务器
+	} else { //非阻塞的。当管道满时，返回管道已满错误，利用default特性检测chan是否已满
 		select {
 		case c.s.ChanCall <- ci:
 		default:
@@ -184,6 +185,7 @@ func (c *Client) call(ci *CallInfo, block bool) (err error) {
 	return
 }
 
+//获取f
 func (c *Client) f(id interface{}, n int) (f interface{}, err error) {
 	f = c.s.functions[id] //根据id取得对应的f
 
@@ -216,11 +218,12 @@ func (c *Client) f(id interface{}, n int) (f interface{}, err error) {
 //调用0
 //适合参数是切片，值任意。无返回值
 func (c *Client) Call0(id interface{}, args ...interface{}) error {
+	//获取f
 	f, err := c.f(id, 0)
 	if err != nil {
 		return err
 	}
-
+	//发起调用
 	err = c.call(&CallInfo{
 		f:       f,
 		args:    args,
@@ -229,19 +232,21 @@ func (c *Client) Call0(id interface{}, args ...interface{}) error {
 	if err != nil {
 		return err
 	}
-
+	//读取结果
 	ri := <-c.chanSyncRet
+	//返回错误字段，代表是否有错
 	return ri.err
 }
 
 //调用1
 //适合参数是切片，值任意。返回值为一个任意值
 func (c *Client) Call1(id interface{}, args ...interface{}) (interface{}, error) {
+	//读取f
 	f, err := c.f(id, 1)
 	if err != nil {
 		return nil, err
 	}
-
+	//发起调用
 	err = c.call(&CallInfo{
 		f:       f,
 		args:    args,
@@ -250,8 +255,9 @@ func (c *Client) Call1(id interface{}, args ...interface{}) (interface{}, error)
 	if err != nil {
 		return nil, err
 	}
-
+	//读取结果
 	ri := <-c.chanSyncRet
+	//返回返回值字段和错误字段
 	return ri.ret, ri.err
 }
 
