@@ -44,26 +44,26 @@ func (s *Skeleton) Init() {
 //实现了Module接口的Run方法
 func (s *Skeleton) Run(closeSig chan bool) {
 	for { //死循环
-		select { //
-		case <-closeSig:
-			s.commandServer.Close()
-			s.server.Close()
-			s.g.Close()
+		select {
+		case <-closeSig: //读取关闭信号
+			s.commandServer.Close() //关闭命令rpc服务器
+			s.server.Close()        //关闭rpc服务器
+			s.g.Close()             //关闭Go
 			return
-		case ci := <-s.server.ChanCall:
-			err := s.server.Exec(ci)
+		case ci := <-s.server.ChanCall: //从rpc服务器读取调用信息
+			err := s.server.Exec(ci) //执行调用
 			if err != nil {
 				log.Error("%v", err)
 			}
-		case ci := <-s.commandServer.ChanCall:
-			err := s.commandServer.Exec(ci)
+		case ci := <-s.commandServer.ChanCall: //从命令rpc服务器读取调用信息
+			err := s.commandServer.Exec(ci) //执行命令调用
 			if err != nil {
 				log.Error("%v", err)
 			}
-		case cb := <-s.g.ChanCb:
-			s.g.Cb(cb)
-		case t := <-s.dispatcher.ChanTimer:
-			t.Cb()
+		case cb := <-s.g.ChanCb: //从Go中读取回调
+			s.g.Cb(cb) //执行回调
+		case t := <-s.dispatcher.ChanTimer: //从分发器中读取到时定时器
+			t.Cb() //执行定时器回调
 		}
 	}
 }
@@ -100,14 +100,16 @@ func (s *Skeleton) NewLinearContext() *g.LinearContext {
 	return s.g.NewLinearContext()
 }
 
+//注册管道RPC
 func (s *Skeleton) RegisterChanRPC(id interface{}, f interface{}) {
 	if s.ChanRPCServer == nil {
 		panic("invalid ChanRPCServer")
 	}
 
-	s.server.Register(id, f)
+	s.server.Register(id, f) //注册函数f
 }
 
+//注册命令
 func (s *Skeleton) RegisterCommand(name string, help string, f interface{}) {
-	console.Register(name, help, f, s.commandServer)
+	console.Register(name, help, f, s.commandServer) //调用控制台的注册功能
 }

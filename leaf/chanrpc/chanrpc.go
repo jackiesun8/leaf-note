@@ -143,9 +143,9 @@ func (s *Server) Go(id interface{}, args ...interface{}) {
 	}
 }
 
-//关闭
+//关闭RPC服务器
 func (s *Server) Close() {
-	close(s.ChanCall)
+	close(s.ChanCall) //关闭管道调用
 
 	for ci := range s.ChanCall {
 		s.ret(ci, &RetInfo{

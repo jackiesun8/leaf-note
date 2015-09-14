@@ -76,6 +76,7 @@ func (g *Go) Cb(cb func()) {
 	}
 }
 
+//关闭Go
 func (g *Go) Close() {
 	for g.pendingGo > 0 {
 		g.Cb(<-g.ChanCb)
