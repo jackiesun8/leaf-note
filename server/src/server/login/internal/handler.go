@@ -15,9 +15,10 @@ func handleMsg(m interface{}, h interface{}) {
 
 //初始化
 func init() {
-	handleMsg(&msg.C2S_Auth{}, handleAuth)
+	handleMsg(&msg.C2S_Auth{}, handleAuth) //注册消息处理函数
 }
 
+//消息处理函数，处理Auth
 func handleAuth(args []interface{}) {
 	m := args[0].(*msg.C2S_Auth)
 	a := args[1].(gate.Agent)
