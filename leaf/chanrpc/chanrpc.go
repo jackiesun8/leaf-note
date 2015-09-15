@@ -48,7 +48,7 @@ type Client struct {
 	s               *Server       //rpc服务器引用
 	chanSyncRet     chan *RetInfo //同步返回信息
 	ChanAsynRet     chan *RetInfo //异步返回信息
-	pendingAsynCall int
+	pendingAsynCall int           //待处理的异步调用
 }
 
 //创建服务器函数
@@ -94,7 +94,7 @@ func (s *Server) ret(ci *CallInfo, ri *RetInfo) (err error) {
 	return
 }
 
-//执行
+//执行RPC调用
 func (s *Server) Exec(ci *CallInfo) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -155,12 +155,12 @@ func (s *Server) Close() {
 }
 
 // goroutine safe
-//打开
+//打开一个rpc客户端
 func (s *Server) Open(l int) *Client {
 	c := new(Client)                       //创建一个rpc客户端
 	c.s = s                                //保存rpc服务器引用
-	c.chanSyncRet = make(chan *RetInfo, 1) //创建一个管道用于传输同步返回信息
-	c.ChanAsynRet = make(chan *RetInfo, l) //创建一个管道用于传输异步返回信息
+	c.chanSyncRet = make(chan *RetInfo, 1) //创建一个管道用于传输同步调用返回信息，同步调用的管道大小一定为1，因为调用以后就需要阻塞读取返回
+	c.ChanAsynRet = make(chan *RetInfo, l) //创建一个管道用于传输异步调用返回信息，异步调用的管道大小不一定为1
 	return c                               //返回rpc客户端
 }
 
@@ -264,11 +264,12 @@ func (c *Client) Call1(id interface{}, args ...interface{}) (interface{}, error)
 //调用N
 //适合参数是切片，返回值也是切片，值均为任意
 func (c *Client) CallN(id interface{}, args ...interface{}) ([]interface{}, error) {
+	//读取f
 	f, err := c.f(id, 2)
 	if err != nil {
 		return nil, err
 	}
-
+	//发起调用
 	err = c.call(&CallInfo{
 		f:       f,
 		args:    args,
@@ -277,11 +278,13 @@ func (c *Client) CallN(id interface{}, args ...interface{}) ([]interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-
+	//读取结果
 	ri := <-c.chanSyncRet
+	//返回返回值字段（先转化类型）和错误字段
 	return ri.ret.([]interface{}), ri.err
 }
 
+//异步调用(内部的)
 func (c *Client) asynCall(id interface{}, args []interface{}, cb interface{}, n int) error {
 	f, err := c.f(id, n)
 	if err != nil {
@@ -302,7 +305,9 @@ func (c *Client) asynCall(id interface{}, args []interface{}, cb interface{}, n 
 	return nil
 }
 
+//异步调用(导出的)
 func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
+	//检查是否提供了回调函数
 	if len(_args) < 1 {
 		panic("callback function not found")
 	}

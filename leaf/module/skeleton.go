@@ -42,6 +42,11 @@ func (s *Skeleton) Init() {
 }
 
 //实现了Module接口的Run方法
+//提供了:
+//1.ChanRPC
+//2.Command ChanRPC
+//3.go
+//4.timer
 func (s *Skeleton) Run(closeSig chan bool) {
 	for { //死循环
 		select {
@@ -100,10 +105,10 @@ func (s *Skeleton) NewLinearContext() *g.LinearContext {
 	return s.g.NewLinearContext()
 }
 
-//注册管道RPC
+//向管道RPC注册函数
 func (s *Skeleton) RegisterChanRPC(id interface{}, f interface{}) {
-	if s.ChanRPCServer == nil {
-		panic("invalid ChanRPCServer")
+	if s.ChanRPCServer == nil { //外部没有传入RPC服务器
+		panic("invalid ChanRPCServer") //抛错
 	}
 
 	s.server.Register(id, f) //注册函数f
@@ -112,4 +117,5 @@ func (s *Skeleton) RegisterChanRPC(id interface{}, f interface{}) {
 //注册命令
 func (s *Skeleton) RegisterCommand(name string, help string, f interface{}) {
 	console.Register(name, help, f, s.commandServer) //调用控制台的注册功能
+	//实际上是将函数注册进s.commandServer,但是控制台也需要注册命令，以向s.commandServer发起rpc调用
 }

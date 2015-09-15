@@ -33,6 +33,7 @@ type Command interface {
 }
 
 //外部命令类型定义
+//外部命令的实现方式为RPC调用
 type ExternalCommand struct {
 	_name  string          // 命令名
 	_help  string          //帮助信息
@@ -56,12 +57,12 @@ func (c *ExternalCommand) run(_args []string) string {
 	for i, v := range _args {
 		args[i] = v
 	}
-	//创建rpc客户端，发起调用
+	//创建rpc客户端，向RPC服务器发起同步调用
 	ret, err := c.server.Open(0).Call1(c._name, args...)
 	if err != nil {
 		return err.Error()
 	}
-	output, ok := ret.(string)
+	output, ok := ret.(string) //返回值需要是字符串
 	if !ok {
 		return "invalid output type"
 	}
@@ -80,7 +81,7 @@ func Register(name string, help string, f interface{}, server *chanrpc.Server) {
 		}
 	}
 	//注册f（函数）
-	server.Register(name, f)
+	server.Register(name, f) //将命令注册进RPC服务器内
 
 	c := new(ExternalCommand)      //创建一个外部命令
 	c._name = name                 //保存命令名字

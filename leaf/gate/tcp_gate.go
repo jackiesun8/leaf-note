@@ -99,6 +99,7 @@ func (a *TCPAgent) Run() {
 	}
 }
 
+//实现代理接口(network.Agent)OnClose函数
 func (a *TCPAgent) OnClose() {
 	if a.gate.AgentChanRPC != nil {
 		err := a.gate.AgentChanRPC.Open(0).Call0("CloseAgent", a)
@@ -108,6 +109,7 @@ func (a *TCPAgent) OnClose() {
 	}
 }
 
+//实现代理接口(gate.Agent)WriteMsg函数
 func (a *TCPAgent) WriteMsg(msg interface{}) {
 	if a.gate.JSONProcessor != nil {
 		// json
@@ -128,14 +130,17 @@ func (a *TCPAgent) WriteMsg(msg interface{}) {
 	}
 }
 
+//实现代理接口(gate.Agent)Close函数
 func (a *TCPAgent) Close() {
 	a.conn.Close()
 }
 
+//实现代理接口(gate.Agent)UserData函数
 func (a *TCPAgent) UserData() interface{} {
 	return a.userData
 }
 
+//实现代理接口(gate.Agent)SetUserData函数
 func (a *TCPAgent) SetUserData(data interface{}) {
 	a.userData = data
 }
