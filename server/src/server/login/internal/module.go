@@ -12,7 +12,7 @@ var (
 
 //模型类型定义
 type Module struct {
-	*module.Skeleton //骨架引用
+	*module.Skeleton //匿名组合骨架
 }
 
 //初始化

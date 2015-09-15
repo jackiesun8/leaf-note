@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	Module = new(internal.Module)
+	Module = new(internal.Module) //创建模块
 )

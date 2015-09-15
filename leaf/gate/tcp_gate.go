@@ -10,21 +10,24 @@ import (
 	"reflect"
 )
 
+//TCP网关服务器类型定义
 type TCPGate struct {
-	Addr              string
-	MaxConnNum        int
-	PendingWriteNum   int
-	LenMsgLen         int
-	MinMsgLen         uint32
-	MaxMsgLen         uint32
-	LittleEndian      bool
-	JSONProcessor     *json.Processor
-	ProtobufProcessor *protobuf.Processor
-	AgentChanRPC      *chanrpc.Server
+	Addr              string              //地址
+	MaxConnNum        int                 //最大连接数
+	PendingWriteNum   int                 //发送缓冲区长度
+	LenMsgLen         int                 //消息长度占用字节数
+	MinMsgLen         uint32              //最小消息长度
+	MaxMsgLen         uint32              //最大消息长度
+	LittleEndian      bool                //大小端标志
+	JSONProcessor     *json.Processor     //json处理器
+	ProtobufProcessor *protobuf.Processor //protobuf处理器
+	AgentChanRPC      *chanrpc.Server     //RPC服务器
 }
 
+//实现了Module接口的Run
 func (gate *TCPGate) Run(closeSig chan bool) {
-	server := new(network.TCPServer)
+	server := new(network.TCPServer) //创建TCP服务器
+	//设置TCP服务器相关参数
 	server.Addr = gate.Addr
 	server.MaxConnNum = gate.MaxConnNum
 	server.PendingWriteNum = gate.PendingWriteNum
@@ -32,10 +35,10 @@ func (gate *TCPGate) Run(closeSig chan bool) {
 	server.MinMsgLen = gate.MinMsgLen
 	server.MaxMsgLen = gate.MaxMsgLen
 	server.LittleEndian = gate.LittleEndian
-	server.NewAgent = func(conn *network.TCPConn) network.Agent {
-		a := new(TCPAgent)
-		a.conn = conn
-		a.gate = gate
+	server.NewAgent = func(conn *network.TCPConn) network.Agent { //设置创建代理函数
+		a := new(TCPAgent) //创建TCP代理
+		a.conn = conn      //保存TCP连接
+		a.gate = gate      //保存TCP网关
 
 		if gate.AgentChanRPC != nil {
 			gate.AgentChanRPC.Go("NewAgent", a)
@@ -44,19 +47,22 @@ func (gate *TCPGate) Run(closeSig chan bool) {
 		return a
 	}
 
-	server.Start()
-	<-closeSig
-	server.Close()
+	server.Start() //启动TCP服务器
+	<-closeSig     //等待关闭信号
+	server.Close() //关闭TCP服务器
 }
 
+//Module接口的OnDestroy
 func (gate *TCPGate) OnDestroy() {}
 
+//TCP代理类型定义
 type TCPAgent struct {
-	conn     *network.TCPConn
-	gate     *TCPGate
-	userData interface{}
+	conn     *network.TCPConn //TCP连接
+	gate     *TCPGate         //TCP网关
+	userData interface{}      //用户数据
 }
 
+//实现代理接口(network.Agent)Run函数
 func (a *TCPAgent) Run() {
 	for {
 		data, err := a.conn.ReadMsg()
