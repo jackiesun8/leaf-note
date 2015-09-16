@@ -307,21 +307,21 @@ func (c *Client) asynCall(id interface{}, args []interface{}, cb interface{}, n 
 
 //异步调用(导出的)
 func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
-	//检查是否提供了回调函数
+	//检查是否提供了回调函数参数，参数个数必定大于等于1
 	if len(_args) < 1 {
 		panic("callback function not found")
 	}
 
-	// args
+	// args 最后一个是回调函数，前面的是RPC调用的参数
 	var args []interface{}
 	if len(_args) > 1 {
-		args = _args[:len(_args)-1]
+		args = _args[:len(_args)-1] //取出RPC调用的参数
 	}
 
 	// cb
-	cb := _args[len(_args)-1]
-	switch cb.(type) {
-	case func(error):
+	cb := _args[len(_args)-1] //取出回调函数
+	switch cb.(type) {        //判断回调函数的类型
+	case func(error): //只接收一个错误
 		err := c.asynCall(id, args, cb, 0)
 		if err != nil {
 			cb.(func(error))(err)
