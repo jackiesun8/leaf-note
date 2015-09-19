@@ -43,10 +43,10 @@ func (s *Skeleton) Init() {
 
 //实现了Module接口的Run方法
 //提供了:
-//1.ChanRPC
-//2.Command ChanRPC
-//3.go
-//4.timer
+//1.ChanRPC（用于模块间交互）
+//2.Command ChanRPC（用于提供命令服务）
+//3.Go()
+//4.timer（用于定时器）
 func (s *Skeleton) Run(closeSig chan bool) {
 	for { //死循环
 		select {
@@ -90,11 +90,11 @@ func (s *Skeleton) CronFunc(expr string, cb func()) (*timer.Cron, error) {
 }
 
 func (s *Skeleton) Go(f func(), cb func()) {
-	if s.GoLen == 0 {
-		panic("invalid GoLen")
+	if s.GoLen == 0 { //如果Go管道为空
+		panic("invalid GoLen") //直接panic
 	}
 
-	s.g.Go(f, cb)
+	s.g.Go(f, cb) //调用骨架中创建的g(Go类型)的Go函数
 }
 
 func (s *Skeleton) NewLinearContext() *g.LinearContext {

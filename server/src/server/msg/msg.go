@@ -6,10 +6,11 @@ import (
 )
 
 var (
-	JSONProcessor     = json.NewProcessor()
-	ProtobufProcessor = protobuf.NewProcessor()
+	JSONProcessor     = json.NewProcessor()     //创建JSON处理器
+	ProtobufProcessor = protobuf.NewProcessor() //创建protobuf处理器
 )
 
+//初始化
 func init() {
 	JSONProcessor.Register(&S2C_Close{})
 	JSONProcessor.Register(&C2S_Auth{})

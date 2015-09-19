@@ -9,10 +9,11 @@ import (
 )
 
 // one Go per goroutine (goroutine not safe)
+//每个goroutine里一个Go
 //Go类型定义
 type Go struct {
-	ChanCb    chan func() //回调管道，传输函数
-	pendingGo int         //
+	ChanCb    chan func() //回调管道，用于传输函数
+	pendingGo int         //待处理的
 }
 
 //线性Go类型定义

@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	Module = new(internal.Module) //创建模块
+	Module = new(internal.Module) //创建并导出网关模块
 )
