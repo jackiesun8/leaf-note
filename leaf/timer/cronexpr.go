@@ -17,6 +17,8 @@ import (
 // Day of month | Yes        | 1-31           | * / , -
 // Month        | Yes        | 1-12           | * / , -
 // Day of week  | Yes        | 0-6            | * / , -
+
+//cron表达式定义
 type CronExpr struct {
 	sec   uint64
 	min   uint64
@@ -27,6 +29,7 @@ type CronExpr struct {
 }
 
 // goroutine safe
+//创建cron表达式
 func NewCronExpr(expr string) (cronExpr *CronExpr, err error) {
 	fields := strings.Fields(expr)
 	if len(fields) != 5 && len(fields) != 6 {
@@ -82,6 +85,7 @@ onError:
 // 4. */num
 // 5. num/num (means num-max/num)
 // 6. num-num/num
+//解析cron字段
 func parseCronField(field string, min int, max int) (cronField uint64, err error) {
 	fields := strings.Split(field, ",")
 	for _, field := range fields {

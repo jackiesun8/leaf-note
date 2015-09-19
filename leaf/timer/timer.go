@@ -55,12 +55,12 @@ func (t *Timer) Cb() {
 	}
 }
 
-//
+//注册定时器
 func (disp *Dispatcher) AfterFunc(d time.Duration, cb func()) *Timer {
-	t := new(Timer)
-	t.cb = cb
-	t.t = time.AfterFunc(d, func() {
-		disp.ChanTimer <- t
+	t := new(Timer)                  //创建定时器
+	t.cb = cb                        //设置回调函数
+	t.t = time.AfterFunc(d, func() { //注意，这里的func是在定时器自己的goroutine中执行的
+		disp.ChanTimer <- t //定时器到时，将定时器发送到管道中
 	})
 	return t
 }

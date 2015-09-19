@@ -41,11 +41,10 @@ func (s *Skeleton) Init() {
 	s.commandServer = chanrpc.NewServer(0) //创建命令RPC服务器
 }
 
-//实现了Module接口的Run方法
-//提供了:
+//实现了Module接口的Run方法并提供了:
 //1.ChanRPC（用于模块间交互）
 //2.Command ChanRPC（用于提供命令服务）
-//3.Go()
+//3.Go(避免操作阻塞当前goroutine)
 //4.timer（用于定时器）
 func (s *Skeleton) Run(closeSig chan bool) {
 	for { //死循环
@@ -65,22 +64,24 @@ func (s *Skeleton) Run(closeSig chan bool) {
 			if err != nil {
 				log.Error("%v", err)
 			}
-		case cb := <-s.g.ChanCb: //从Go中读取回调
-			s.g.Cb(cb) //执行回调
+		case cb := <-s.g.ChanCb: //从Go的回调管道中读取回调函数
+			s.g.Cb(cb) //执行回调函数（不用自己写 d.Cb(<-d.ChanCb)了 ）
 		case t := <-s.dispatcher.ChanTimer: //从分发器中读取到时定时器
 			t.Cb() //执行定时器回调
 		}
 	}
 }
 
+//注册定时器
 func (s *Skeleton) AfterFunc(d time.Duration, cb func()) *timer.Timer {
-	if s.TimerDispatcherLen == 0 {
+	if s.TimerDispatcherLen == 0 { //判断定时器分发管道长度
 		panic("invalid TimerDispatcherLen")
 	}
 
 	return s.dispatcher.AfterFunc(d, cb)
 }
 
+//注册cron
 func (s *Skeleton) CronFunc(expr string, cb func()) (*timer.Cron, error) {
 	if s.TimerDispatcherLen == 0 {
 		panic("invalid TimerDispatcherLen")
@@ -89,6 +90,7 @@ func (s *Skeleton) CronFunc(expr string, cb func()) (*timer.Cron, error) {
 	return s.dispatcher.CronFunc(expr, cb)
 }
 
+//一般的go
 func (s *Skeleton) Go(f func(), cb func()) {
 	if s.GoLen == 0 { //如果Go管道为空
 		panic("invalid GoLen") //直接panic
@@ -97,6 +99,7 @@ func (s *Skeleton) Go(f func(), cb func()) {
 	s.g.Go(f, cb) //调用骨架中创建的g(Go类型)的Go函数
 }
 
+//创建线性上下文，再执行线性上下文的Go
 func (s *Skeleton) NewLinearContext() *g.LinearContext {
 	if s.GoLen == 0 {
 		panic("invalid GoLen")
