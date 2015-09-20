@@ -8,15 +8,15 @@ import (
 func Example() {
 	type Record struct {
 		// index 0
-		IndexInt int "index"
+		IndexInt int "index" //数字索引
 		// index 1
-		IndexStr string "index"
-		_Number  int32
-		Str      string
-		Arr1     [2]int
-		Arr2     [3][2]int
-		Arr3     []int
-		St       struct {
+		IndexStr string    "index" //字符串索引
+		_Number  int32     //数字类型
+		Str      string    //字符串类型
+		Arr1     [2]int    //数组类型
+		Arr2     [3][2]int //嵌套数组
+		Arr3     []int     //变长数组
+		St       struct {  //结构体类型
 			Name string "name"
 			Num  int    "num"
 		}

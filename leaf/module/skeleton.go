@@ -83,7 +83,7 @@ func (s *Skeleton) AfterFunc(d time.Duration, cb func()) *timer.Timer {
 
 //注册cron
 func (s *Skeleton) CronFunc(expr string, cb func()) (*timer.Cron, error) {
-	if s.TimerDispatcherLen == 0 {
+	if s.TimerDispatcherLen == 0 { //判断定时器分发管道长度
 		panic("invalid TimerDispatcherLen")
 	}
 

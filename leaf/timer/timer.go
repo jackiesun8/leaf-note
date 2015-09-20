@@ -17,7 +17,7 @@ type Dispatcher struct {
 //创建分发器
 func NewDispatcher(l int) *Dispatcher {
 	disp := new(Dispatcher)               //创建分发器
-	disp.ChanTimer = make(chan *Timer, l) //创建管道，传输定时器
+	disp.ChanTimer = make(chan *Timer, l) //创建管道，传输到时的定时器
 	return disp                           //返回分发器
 }
 
@@ -62,47 +62,49 @@ func (disp *Dispatcher) AfterFunc(d time.Duration, cb func()) *Timer {
 	t.t = time.AfterFunc(d, func() { //注意，这里的func是在定时器自己的goroutine中执行的
 		disp.ChanTimer <- t //定时器到时，将定时器发送到管道中
 	})
-	return t
+	return t //返回自定义的定时器
 }
 
 // Cron
 //计划任务类型定义
 type Cron struct {
-	t *Timer
+	t *Timer //自定义定时器
 }
 
-//
+//停止计划任务
 func (c *Cron) Stop() {
-	c.t.Stop()
+	c.t.Stop() //关闭自定义定时器
 }
 
+//注册计划任务
 func (disp *Dispatcher) CronFunc(expr string, _cb func()) (*Cron, error) {
-	cronExpr, err := NewCronExpr(expr)
+	cronExpr, err := NewCronExpr(expr) //创建一个计划任务表达式
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
-	nextTime := cronExpr.Next(now)
+	//第一次计划任务
+	now := time.Now()              //当前时间
+	nextTime := cronExpr.Next(now) //下一个时间
 	if nextTime.IsZero() {
 		return nil, errors.New("next time not found")
 	}
 
-	cron := new(Cron)
+	cron := new(Cron) //创建一个计划任务
 
 	// callback
-	var cb func()
-	cb = func() {
-		defer _cb()
+	var cb func() //定义一个回调函数，执行后续计划任务
+	cb = func() { //回调函数定义
+		defer _cb() //延迟执行计划任务用户回调。第一次计划任务到时到第二次计划任务注册完毕才执行用户回调
 
-		now := time.Now()
-		nextTime := cronExpr.Next(now)
-		if nextTime.IsZero() {
-			return
+		now := time.Now()              //当前时间
+		nextTime := cronExpr.Next(now) //下一个时间
+		if nextTime.IsZero() {         //如果为零值
+			return //直接返回，不注册后续的计划任务，会再执行一次用户回调
 		}
-		cron.t = disp.AfterFunc(nextTime.Sub(now), cb)
+		cron.t = disp.AfterFunc(nextTime.Sub(now), cb) //计算时间差值，注册定时器
 	}
 
-	cron.t = disp.AfterFunc(nextTime.Sub(now), cb)
+	cron.t = disp.AfterFunc(nextTime.Sub(now), cb) //第一次计划任务
 	return cron, nil
 }
