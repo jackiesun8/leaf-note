@@ -11,15 +11,15 @@ import (
 )
 
 //默认值
-var Comma = '\t'
-var Comment = '#'
+var Comma = '\t'  //分隔符
+var Comment = '#' //注释符
 
 type Index map[interface{}]interface{}
 
 //记录文件类型定义
 type RecordFile struct {
-	Comma      rune         //字符类型，
-	Comment    rune         //字符类型，注释
+	Comma      rune         //字符类型
+	Comment    rune         //字符类型
 	typeRecord reflect.Type //反射类型
 	records    []interface{}
 	indexes    []Index
@@ -27,13 +27,13 @@ type RecordFile struct {
 
 //创建一个记录文件
 func New(st interface{}) (*RecordFile, error) {
-	typeRecord := reflect.TypeOf(st)
-	if typeRecord == nil || typeRecord.Kind() != reflect.Struct {
+	typeRecord := reflect.TypeOf(st)                              //获取st类型
+	if typeRecord == nil || typeRecord.Kind() != reflect.Struct { //判断st合法性，必须是个结构体
 		return nil, errors.New("st must be a struct")
 	}
 
-	for i := 0; i < typeRecord.NumField(); i++ {
-		f := typeRecord.Field(i)
+	for i := 0; i < typeRecord.NumField(); i++ { //遍历结构体内的所有字段
+		f := typeRecord.Field(i) //取得对应的字段
 
 		kind := f.Type.Kind()
 		switch kind {
