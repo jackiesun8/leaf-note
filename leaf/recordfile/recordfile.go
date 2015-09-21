@@ -11,10 +11,10 @@ import (
 )
 
 //默认值
-var Comma = '\t'  //分隔符
+var Comma = '\t'  //分隔符,默认是制表符
 var Comment = '#' //注释符
 
-type Index map[interface{}]interface{}
+type Index map[interface{}]interface{} //索引类型
 
 //记录文件类型定义
 type RecordFile struct {
@@ -25,127 +25,130 @@ type RecordFile struct {
 	indexes    []Index
 }
 
-//创建一个记录文件
+//创建一个记录文件,一个记录文件对应一个结构体
 func New(st interface{}) (*RecordFile, error) {
 	typeRecord := reflect.TypeOf(st)                              //获取st类型
 	if typeRecord == nil || typeRecord.Kind() != reflect.Struct { //判断st合法性，必须是个结构体
 		return nil, errors.New("st must be a struct")
 	}
 
+	//只是检查类型是否正确
 	for i := 0; i < typeRecord.NumField(); i++ { //遍历结构体内的所有字段
 		f := typeRecord.Field(i) //取得对应的字段
 
-		kind := f.Type.Kind()
+		kind := f.Type.Kind() //判断字段类型
 		switch kind {
-		case reflect.Bool:
-		case reflect.Int:
-		case reflect.Int8:
-		case reflect.Int16:
-		case reflect.Int32:
-		case reflect.Int64:
-		case reflect.Uint8:
-		case reflect.Uint16:
-		case reflect.Uint32:
-		case reflect.Uint64:
-		case reflect.Float32:
-		case reflect.Float64:
-		case reflect.String:
-		case reflect.Struct:
-		case reflect.Array:
-		case reflect.Slice:
+		case reflect.Bool: //布尔型
+		case reflect.Int: //整型(有符号)
+		case reflect.Int8: //有符号8位
+		case reflect.Int16: //有符号16位
+		case reflect.Int32: //有符号32位
+		case reflect.Int64: //有符号64位
+		case reflect.Uint8: //无符号8位
+		case reflect.Uint16: //无符号16位
+		case reflect.Uint32: //无符号32位
+		case reflect.Uint64: //无符号32位
+		case reflect.Float32: //32位浮点数
+		case reflect.Float64: //64位浮点数
+		case reflect.String: //字符串
+		case reflect.Struct: //结构体
+		case reflect.Array: //数组
+		case reflect.Slice: //切片
+		//如果不是上面的类型，就属于非法类型
 		default:
 			return nil, fmt.Errorf("invalid type: %v %s",
 				f.Name, kind)
 		}
 
-		tag := f.Tag
-		if tag == "index" {
-			switch kind {
-			case reflect.Struct, reflect.Array, reflect.Slice:
+		tag := f.Tag        //获取字段的标签
+		if tag == "index" { //如果是索引标签
+			switch kind { //判断类型
+			case reflect.Struct, reflect.Array, reflect.Slice: //索引字段不能是结构体 数组 切片
 				return nil, fmt.Errorf("could not index %s field %v %v",
 					kind, i, f.Name)
 			}
 		}
 	}
 
-	rf := new(RecordFile)
-	rf.typeRecord = typeRecord
+	rf := new(RecordFile)      //创建一个记录文件
+	rf.typeRecord = typeRecord //保存Type
 
-	return rf, nil
+	return rf, nil //返回
 }
 
+//读取记录文件
 func (rf *RecordFile) Read(name string) error {
-	file, err := os.Open(name)
+	file, err := os.Open(name) //打开文件
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //延迟关闭文件
 
-	if rf.Comma == 0 {
+	if rf.Comma == 0 { //设置分隔符
 		rf.Comma = Comma
 	}
-	if rf.Comment == 0 {
+	if rf.Comment == 0 { //设置注释符
 		rf.Comment = Comment
 	}
-	reader := csv.NewReader(file)
-	reader.Comma = rf.Comma
-	reader.Comment = rf.Comment
-	lines, err := reader.ReadAll()
+	reader := csv.NewReader(file)  //创建一个csv reader
+	reader.Comma = rf.Comma        //设置分隔符
+	reader.Comment = rf.Comment    //设置注释符
+	lines, err := reader.ReadAll() //读取所有记录
 	if err != nil {
 		return err
 	}
 
-	typeRecord := rf.typeRecord
+	typeRecord := rf.typeRecord //获取Type
 
 	// make records
-	records := make([]interface{}, len(lines)-1)
+	records := make([]interface{}, len(lines)-1) //创建切片保存记录,第一行（中文说明字段）不用保存
 
 	// make indexes
-	indexes := []Index{}
-	for i := 0; i < typeRecord.NumField(); i++ {
-		tag := typeRecord.Field(i).Tag
-		if tag == "index" {
-			indexes = append(indexes, make(Index))
+	indexes := []Index{}                         //索引切片，存储多个索引，索引本身实际上是一个map
+	for i := 0; i < typeRecord.NumField(); i++ { //遍历所有字段
+		tag := typeRecord.Field(i).Tag //获取每个字段的标签
+		if tag == "index" {            //如果标签是索引标签
+			indexes = append(indexes, make(Index)) //添加索引到索引切片
 		}
 	}
 
-	for n := 1; n < len(lines); n++ {
-		value := reflect.New(typeRecord)
-		records[n-1] = value.Interface()
-		record := value.Elem()
+	for n := 1; n < len(lines); n++ { //遍历所有记录
+		value := reflect.New(typeRecord) //创建一个指针指向特定类型的值(零值)
+		records[n-1] = value.Interface() //转化为interface并保存在records内
+		record := value.Elem()           //获取Value本身,value是interface或pointer
 
-		line := lines[n]
-		if len(line) != typeRecord.NumField() {
+		line := lines[n]                        //该行的数据
+		if len(line) != typeRecord.NumField() { //判断该行字段数是否匹配
 			return fmt.Errorf("line %v, field count mismatch: %v %v",
 				n, len(line), typeRecord.NumField())
 		}
 
 		iIndex := 0
 
-		for i := 0; i < typeRecord.NumField(); i++ {
-			f := typeRecord.Field(i)
+		for i := 0; i < typeRecord.NumField(); i++ { //遍历所有字段
+			f := typeRecord.Field(i) //获得字段
 
 			// records
-			strField := line[i]
-			field := record.Field(i)
-			if !field.CanSet() {
-				continue
+			strField := line[i]      //字段值(字符串)
+			field := record.Field(i) //获得字段
+			if !field.CanSet() {     //如果字段不可设置
+				continue //继续循环
 			}
 
 			var err error
 
-			kind := f.Type.Kind()
-			if kind == reflect.Bool {
+			kind := f.Type.Kind()     //字段的类型
+			if kind == reflect.Bool { //布尔型
 				var v bool
-				v, err = strconv.ParseBool(strField)
+				v, err = strconv.ParseBool(strField) //转化成Bool
 				if err == nil {
-					field.SetBool(v)
+					field.SetBool(v) //设置值
 				}
-			} else if kind == reflect.Int ||
+			} else if kind == reflect.Int || //少了Int8
 				kind == reflect.Int16 ||
 				kind == reflect.Int32 ||
 				kind == reflect.Int64 {
-				var v int64
+				var v int64 //用最大的值存
 				v, err = strconv.ParseInt(strField, 0, f.Type.Bits())
 				if err == nil {
 					field.SetInt(v)
