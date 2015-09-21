@@ -10,19 +10,22 @@ import (
 	"strconv"
 )
 
+//默认值
 var Comma = '\t'
 var Comment = '#'
 
 type Index map[interface{}]interface{}
 
+//记录文件类型定义
 type RecordFile struct {
-	Comma      rune
-	Comment    rune
-	typeRecord reflect.Type
+	Comma      rune         //字符类型，
+	Comment    rune         //字符类型，注释
+	typeRecord reflect.Type //反射类型
 	records    []interface{}
 	indexes    []Index
 }
 
+//创建一个记录文件
 func New(st interface{}) (*RecordFile, error) {
 	typeRecord := reflect.TypeOf(st)
 	if typeRecord == nil || typeRecord.Kind() != reflect.Struct {
