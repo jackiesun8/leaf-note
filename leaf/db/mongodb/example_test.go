@@ -24,11 +24,13 @@ func Example() {
 	}
 
 	// auto increment
+	//创建自增字段
 	err = c.EnsureCounter("test", "counters", "test")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	//增长自增字段
 	for i := 0; i < 3; i++ {
 		id, err := c.NextSeq("test", "counters", "test")
 		if err != nil {

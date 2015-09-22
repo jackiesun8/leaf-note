@@ -112,10 +112,10 @@ func (rf *RecordFile) Read(name string) error {
 		}
 	}
 
-	for n := 1; n < len(lines); n++ { //遍历所有记录
+	for n := 1; n < len(lines); n++ { //遍历所有记录，一行对应一个typeRecord类型的值
 		value := reflect.New(typeRecord) //创建一个指针指向特定类型的值(零值)
-		records[n-1] = value.Interface() //转化为interface并保存在records内
-		record := value.Elem()           //获取Value本身,value是interface或pointer
+		records[n-1] = value.Interface() //转化指针为interface并保存在records内
+		record := value.Elem()           //获取值本身,value是interface或pointer
 
 		line := lines[n]                        //该行的数据
 		if len(line) != typeRecord.NumField() { //判断该行字段数是否匹配
@@ -184,32 +184,35 @@ func (rf *RecordFile) Read(name string) error {
 
 			// indexes
 			//设置索引
-			if f.Tag == "index" {
-				index := indexes[iIndex]
-				iIndex++
-				if _, ok := index[field.Interface()]; ok {
+			if f.Tag == "index" { //如果该字段是索引字段
+				index := indexes[iIndex]                   //获取Index
+				iIndex++                                   //自增索引切片的索引
+				if _, ok := index[field.Interface()]; ok { //判断多条记录之间的索引字段是否重复
 					return fmt.Errorf("index error: duplicate at (row=%v, col=%v)",
 						n, i)
 				}
-				index[field.Interface()] = records[n-1]
+				index[field.Interface()] = records[n-1] //保存索引，实际上是保存了一个指针
 			}
 		}
 	}
 
-	rf.records = records //其实是指向typeRecord类型的值的指针切片
-	rf.indexes = indexes
+	rf.records = records //设置记录字段，其实是指向typeRecord类型的值的指针切片
+	rf.indexes = indexes //设置索引字段，一个Index的切片，Index又是一个map:索引字段值到该行记录的指针的映射
 
 	return nil
 }
 
+//获取记录指针
 func (rf *RecordFile) Record(i int) interface{} {
 	return rf.records[i]
 }
 
+//获取记录的数目
 func (rf *RecordFile) NumRecord() int {
-	return len(rf.records)
+	return len(rf.records) //取records（切片）的长度即可
 }
 
+//获取Index(一个map) 多索引的时候用到
 func (rf *RecordFile) Indexes(i int) Index {
 	if i >= len(rf.indexes) {
 		return nil
@@ -217,10 +220,11 @@ func (rf *RecordFile) Indexes(i int) Index {
 	return rf.indexes[i]
 }
 
+//获取记录指针
 func (rf *RecordFile) Index(i interface{}) interface{} {
-	index := rf.Indexes(0)
-	if index == nil {
-		return nil
+	index := rf.Indexes(0) //单索引
+	if index == nil {      //没有Index
+		return nil //空值
 	}
-	return index[i]
+	return index[i] //返回该行记录的指针
 }
