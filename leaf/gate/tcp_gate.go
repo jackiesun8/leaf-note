@@ -78,7 +78,7 @@ func (a *TCPAgent) Run() {
 				log.Debug("unmarshal json error: %v", err)
 				break
 			}
-			err = a.gate.JSONProcessor.Route(msg, Agent(a)) //分发数据
+			err = a.gate.JSONProcessor.Route(msg, Agent(a)) //分发数据，将a转化成Agent作为用户数据
 			if err != nil {
 				log.Debug("route message error: %v", err)
 				break
@@ -110,37 +110,41 @@ func (a *TCPAgent) OnClose() {
 }
 
 //实现代理接口(gate.Agent)WriteMsg函数
+//发送消息
 func (a *TCPAgent) WriteMsg(msg interface{}) {
-	if a.gate.JSONProcessor != nil {
+	if a.gate.JSONProcessor != nil { //使用JSON处理器
 		// json
-		data, err := a.gate.JSONProcessor.Marshal(msg)
+		data, err := a.gate.JSONProcessor.Marshal(msg) //编码JSON消息
 		if err != nil {
 			log.Error("marshal json %v error: %v", reflect.TypeOf(msg), err)
 			return
 		}
-		a.conn.WriteMsg(data)
-	} else if a.gate.ProtobufProcessor != nil {
+		a.conn.WriteMsg(data) //发送消息
+	} else if a.gate.ProtobufProcessor != nil { //使用protobuf处理器
 		// protobuf
-		id, data, err := a.gate.ProtobufProcessor.Marshal(msg.(proto.Message))
+		id, data, err := a.gate.ProtobufProcessor.Marshal(msg.(proto.Message)) //编码protobuf消息
 		if err != nil {
 			log.Error("marshal protobuf %v error: %v", reflect.TypeOf(msg), err)
 			return
 		}
-		a.conn.WriteMsg(id, data)
+		a.conn.WriteMsg(id, data) //发送消息
 	}
 }
 
 //实现代理接口(gate.Agent)Close函数
+//关闭代理
 func (a *TCPAgent) Close() {
-	a.conn.Close()
+	a.conn.Close() //关闭连接
 }
 
 //实现代理接口(gate.Agent)UserData函数
+//获取用户数据
 func (a *TCPAgent) UserData() interface{} {
 	return a.userData
 }
 
 //实现代理接口(gate.Agent)SetUserData函数
+//设置用户数据
 func (a *TCPAgent) SetUserData(data interface{}) {
 	a.userData = data
 }

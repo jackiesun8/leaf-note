@@ -21,6 +21,7 @@ type MsgInfo struct {
 	msgHandler MsgHandler      //消息处理函数，处理消息有两种方式，一种的RPC服务器，一种是处理函数，可以同时处理
 }
 
+//消息处理函数类型定义
 type MsgHandler func([]interface{})
 
 //创建一个处理器
@@ -99,7 +100,7 @@ func (p *Processor) Route(msg interface{}, userData interface{}) error {
 		i.msgHandler([]interface{}{msg, userData})
 	}
 	if i.msgRouter != nil { //调用RPC服务器
-		i.msgRouter.Go(msgType, msg, userData)
+		i.msgRouter.Go(msgType, msg, userData) //rpc服务器自己发起调用
 	}
 	return nil
 }

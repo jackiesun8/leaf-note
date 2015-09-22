@@ -25,7 +25,7 @@ type Server struct {
 type CallInfo struct {
 	f       interface{}   //函数
 	args    []interface{} //参数
-	chanRet chan *RetInfo //返回值管道，用于传输返回值
+	chanRet chan *RetInfo //返回值管道，用于传输返回值，可能是同步返回值管道也可能是异步返回值管道
 	cb      interface{}   //回调
 }
 
@@ -79,23 +79,24 @@ func (s *Server) Register(id interface{}, f interface{}) {
 
 //返回
 func (s *Server) ret(ci *CallInfo, ri *RetInfo) (err error) {
-	if ci.chanRet == nil {
+	if ci.chanRet == nil { //返回管道不能为空
 		return
 	}
-
+	//延迟捕获异常
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
 		}
 	}()
 
-	ri.cb = ci.cb
-	ci.chanRet <- ri
+	ri.cb = ci.cb    //将回调函数保存到返回信息中
+	ci.chanRet <- ri //将返回信息发送到返回值管道中
 	return
 }
 
 //执行RPC调用
 func (s *Server) Exec(ci *CallInfo) (err error) {
+	//延迟处理异常
 	defer func() {
 		if r := recover(); r != nil {
 			if conf.LenStackBuf > 0 {
@@ -105,30 +106,30 @@ func (s *Server) Exec(ci *CallInfo) (err error) {
 			} else {
 				err = fmt.Errorf("%v", r)
 			}
-
-			s.ret(ci, &RetInfo{err: fmt.Errorf("%v", r)})
+			s.ret(ci, &RetInfo{err: fmt.Errorf("%v", r)}) //返回一个错误
 		}
 	}()
 
 	// execute
-	switch ci.f.(type) {
-	case func([]interface{}):
-		ci.f.(func([]interface{}))(ci.args)
-		return s.ret(ci, &RetInfo{})
-	case func([]interface{}) interface{}:
-		ret := ci.f.(func([]interface{}) interface{})(ci.args)
-		return s.ret(ci, &RetInfo{ret: ret})
-	case func([]interface{}) []interface{}:
-		ret := ci.f.(func([]interface{}) []interface{})(ci.args)
-		return s.ret(ci, &RetInfo{ret: ret})
+	switch ci.f.(type) { //判断f类型
+	case func([]interface{}): //无返回值
+		ci.f.(func([]interface{}))(ci.args) //执行调用
+		return s.ret(ci, &RetInfo{})        //返回值为空
+	case func([]interface{}) interface{}: //一个返回值
+		ret := ci.f.(func([]interface{}) interface{})(ci.args) //执行调用
+		return s.ret(ci, &RetInfo{ret: ret})                   //一个返回值
+	case func([]interface{}) []interface{}: //n个返回值
+		ret := ci.f.(func([]interface{}) []interface{})(ci.args) //执行调用
+		return s.ret(ci, &RetInfo{ret: ret})                     //多个返回值
 	}
 
 	panic("bug")
 }
 
 // goroutine safe
+//RPC服务器调用自己
 func (s *Server) Go(id interface{}, args ...interface{}) {
-	f := s.functions[id]
+	f := s.functions[id] //根据id取得对应的f
 	if f == nil {
 		return
 	}
@@ -137,7 +138,7 @@ func (s *Server) Go(id interface{}, args ...interface{}) {
 		recover()
 	}()
 
-	s.ChanCall <- &CallInfo{
+	s.ChanCall <- &CallInfo{ //将调用消息通过管道传输到rpc服务器
 		f:    f,
 		args: args,
 	}
@@ -146,7 +147,7 @@ func (s *Server) Go(id interface{}, args ...interface{}) {
 //关闭RPC服务器
 func (s *Server) Close() {
 	close(s.ChanCall) //关闭管道调用
-
+	//遍历所有未处理完的消息，返回错误消息(rpc server已关闭)
 	for ci := range s.ChanCall {
 		s.ret(ci, &RetInfo{
 			err: errors.New("chanrpc server closed"),
@@ -199,11 +200,11 @@ func (c *Client) f(id interface{}, n int) (f interface{}, err error) {
 	//根据n的值判断f类型是否正确
 	switch n {
 	case 0:
-		_, ok = f.(func([]interface{}))
+		_, ok = f.(func([]interface{})) //n为0，无返回值
 	case 1:
-		_, ok = f.(func([]interface{}) interface{})
+		_, ok = f.(func([]interface{}) interface{}) //n为1，一个返回值
 	case 2:
-		_, ok = f.(func([]interface{}) []interface{})
+		_, ok = f.(func([]interface{}) []interface{}) //n为2，多个返回值
 	default:
 		panic("bug")
 	}
@@ -217,6 +218,7 @@ func (c *Client) f(id interface{}, n int) (f interface{}, err error) {
 
 //调用0
 //适合参数是切片，值任意。无返回值
+//call0 call1 calln 可以将0 1 n记作0个返回值，1个返回值，n个返回值
 func (c *Client) Call0(id interface{}, args ...interface{}) error {
 	//获取f
 	f, err := c.f(id, 0)
@@ -227,7 +229,7 @@ func (c *Client) Call0(id interface{}, args ...interface{}) error {
 	err = c.call(&CallInfo{
 		f:       f,
 		args:    args,
-		chanRet: c.chanSyncRet,
+		chanRet: c.chanSyncRet, //同步返回管道
 	}, true)
 	if err != nil {
 		return err
@@ -284,28 +286,29 @@ func (c *Client) CallN(id interface{}, args ...interface{}) ([]interface{}, erro
 	return ri.ret.([]interface{}), ri.err
 }
 
-//异步调用(内部的)
+//发起异步调用(内部的)
 func (c *Client) asynCall(id interface{}, args []interface{}, cb interface{}, n int) error {
+	//获得f
 	f, err := c.f(id, n)
 	if err != nil {
 		return err
 	}
-
+	//发起调用
 	err = c.call(&CallInfo{
 		f:       f,
 		args:    args,
-		chanRet: c.ChanAsynRet,
+		chanRet: c.ChanAsynRet, //异步返回管道
 		cb:      cb,
 	}, false)
 	if err != nil {
 		return err
 	}
-
-	c.pendingAsynCall++
+	//增加计数器
+	c.pendingAsynCall++ //待处理的异步调用
 	return nil
 }
 
-//异步调用(导出的)
+//发起异步调用(导出的)
 func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
 	//检查是否提供了回调函数参数，参数个数必定大于等于1
 	if len(_args) < 1 {
@@ -322,16 +325,16 @@ func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
 	cb := _args[len(_args)-1] //取出回调函数
 	switch cb.(type) {        //判断回调函数的类型
 	case func(error): //只接收一个错误
-		err := c.asynCall(id, args, cb, 0)
-		if err != nil {
-			cb.(func(error))(err)
+		err := c.asynCall(id, args, cb, 0) //发起异步调用(内部)
+		if err != nil {                    //出错
+			cb.(func(error))(err) //直接调用回调
 		}
-	case func(interface{}, error):
+	case func(interface{}, error): //接收一个返回值和一个错误
 		err := c.asynCall(id, args, cb, 1)
 		if err != nil {
 			cb.(func(interface{}, error))(nil, err)
 		}
-	case func([]interface{}, error):
+	case func([]interface{}, error): //接收多个返回值和一个错误
 		err := c.asynCall(id, args, cb, 2)
 		if err != nil {
 			cb.(func([]interface{}, error))(nil, err)
@@ -341,23 +344,25 @@ func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
 	}
 }
 
+//执行回调
 func (c *Client) Cb(ri *RetInfo) {
-	switch ri.cb.(type) {
-	case func(error):
-		ri.cb.(func(error))(ri.err)
-	case func(interface{}, error):
-		ri.cb.(func(interface{}, error))(ri.ret, ri.err)
-	case func([]interface{}, error):
-		ri.cb.(func([]interface{}, error))(ri.ret.([]interface{}), ri.err)
+	switch ri.cb.(type) { //判断回调类型
+	case func(error): //无返回值，只接收一个错误
+		ri.cb.(func(error))(ri.err) //执行回调
+	case func(interface{}, error): //一个返回值，一个错误
+		ri.cb.(func(interface{}, error))(ri.ret, ri.err) //执行回调
+	case func([]interface{}, error): //多个返回值，一个错误
+		ri.cb.(func([]interface{}, error))(ri.ret.([]interface{}), ri.err) //执行回调
 	default:
 		panic("bug")
 	}
 
-	c.pendingAsynCall--
+	c.pendingAsynCall-- //减少计数器
 }
 
+//关闭rpc客户端
 func (c *Client) Close() {
-	for c.pendingAsynCall > 0 {
-		c.Cb(<-c.ChanAsynRet)
+	for c.pendingAsynCall > 0 { //如果还有未处理的异步调用
+		c.Cb(<-c.ChanAsynRet) //取出异步返回值，执行回调
 	}
 }
