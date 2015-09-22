@@ -25,7 +25,7 @@ type RecordFile struct {
 	indexes    []Index
 }
 
-//创建一个记录文件,一个记录文件对应一个结构体
+//创建一个记录文件,一个记录文件对应一个结构体,一行记录则对应结构体的一个值
 func New(st interface{}) (*RecordFile, error) {
 	typeRecord := reflect.TypeOf(st)                              //获取st类型
 	if typeRecord == nil || typeRecord.Kind() != reflect.Struct { //判断st合法性，必须是个结构体
@@ -142,47 +142,48 @@ func (rf *RecordFile) Read(name string) error {
 				var v bool
 				v, err = strconv.ParseBool(strField) //转化成Bool
 				if err == nil {
-					field.SetBool(v) //设置值
+					field.SetBool(v) //保存值
 				}
-			} else if kind == reflect.Int || //少了Int8
+			} else if kind == reflect.Int || //有符号整型，少了Int8判断
 				kind == reflect.Int16 ||
 				kind == reflect.Int32 ||
 				kind == reflect.Int64 {
-				var v int64 //用最大的值存
-				v, err = strconv.ParseInt(strField, 0, f.Type.Bits())
+				var v int64
+				v, err = strconv.ParseInt(strField, 0, f.Type.Bits()) //转化成整型
 				if err == nil {
-					field.SetInt(v)
+					field.SetInt(v) //保存值
 				}
-			} else if kind == reflect.Uint8 ||
+			} else if kind == reflect.Uint8 || //无符号整型
 				kind == reflect.Uint16 ||
 				kind == reflect.Uint32 ||
 				kind == reflect.Uint64 {
 				var v uint64
-				v, err = strconv.ParseUint(strField, 0, f.Type.Bits())
+				v, err = strconv.ParseUint(strField, 0, f.Type.Bits()) //转化
 				if err == nil {
-					field.SetUint(v)
+					field.SetUint(v) //保存
 				}
-			} else if kind == reflect.Float32 ||
+			} else if kind == reflect.Float32 || //浮点型
 				kind == reflect.Float64 {
 				var v float64
 				v, err = strconv.ParseFloat(strField, f.Type.Bits())
 				if err == nil {
 					field.SetFloat(v)
 				}
-			} else if kind == reflect.String {
+			} else if kind == reflect.String { //字符串
 				field.SetString(strField)
-			} else if kind == reflect.Struct ||
+			} else if kind == reflect.Struct || //结构体 数组 切片，用JSON表达
 				kind == reflect.Array ||
 				kind == reflect.Slice {
-				err = json.Unmarshal([]byte(strField), field.Addr().Interface())
+				err = json.Unmarshal([]byte(strField), field.Addr().Interface()) //解析JSON串
 			}
 
-			if err != nil {
+			if err != nil { //出错
 				return fmt.Errorf("parse field (row=%v, col=%v) error: %v",
 					n, i, err)
 			}
 
 			// indexes
+			//设置索引
 			if f.Tag == "index" {
 				index := indexes[iIndex]
 				iIndex++
@@ -195,7 +196,7 @@ func (rf *RecordFile) Read(name string) error {
 		}
 	}
 
-	rf.records = records
+	rf.records = records //其实是指向typeRecord类型的值的指针切片
 	rf.indexes = indexes
 
 	return nil
