@@ -12,6 +12,7 @@ var (
 
 //初始化
 func init() {
+	//注册消息
 	JSONProcessor.Register(&S2C_Close{})
 	JSONProcessor.Register(&C2S_Auth{})
 	JSONProcessor.Register(&S2C_Auth{})

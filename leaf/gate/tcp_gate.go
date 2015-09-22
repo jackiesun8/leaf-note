@@ -65,32 +65,32 @@ type TCPAgent struct {
 //实现代理接口(network.Agent)Run函数
 func (a *TCPAgent) Run() {
 	for {
-		data, err := a.conn.ReadMsg()
+		data, err := a.conn.ReadMsg() //读取一条完整的消息
 		if err != nil {
 			log.Debug("read message error: %v", err)
 			break
 		}
 
-		if a.gate.JSONProcessor != nil {
+		if a.gate.JSONProcessor != nil { //配置为使用JSON处理
 			// json
-			msg, err := a.gate.JSONProcessor.Unmarshal(data)
+			msg, err := a.gate.JSONProcessor.Unmarshal(data) //解码JSON数据
 			if err != nil {
 				log.Debug("unmarshal json error: %v", err)
 				break
 			}
-			err = a.gate.JSONProcessor.Route(msg, Agent(a))
+			err = a.gate.JSONProcessor.Route(msg, Agent(a)) //分发数据
 			if err != nil {
 				log.Debug("route message error: %v", err)
 				break
 			}
-		} else if a.gate.ProtobufProcessor != nil {
+		} else if a.gate.ProtobufProcessor != nil { //配置为使用protobuf处理
 			// protobuf
-			msg, err := a.gate.ProtobufProcessor.Unmarshal(data)
+			msg, err := a.gate.ProtobufProcessor.Unmarshal(data) //解码protobuf数据
 			if err != nil {
 				log.Debug("unmarshal protobuf error: %v", err)
 				break
 			}
-			err = a.gate.ProtobufProcessor.Route(msg, Agent(a))
+			err = a.gate.ProtobufProcessor.Route(msg, Agent(a)) //分发数据
 			if err != nil {
 				log.Debug("route message error: %v", err)
 				break

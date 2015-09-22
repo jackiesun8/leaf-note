@@ -16,25 +16,26 @@ import (
 // -------------------------
 //处理器类型定义
 type Processor struct {
-	littleEndian bool
-	msgInfo      []*MsgInfo
-	msgID        map[reflect.Type]uint16
+	littleEndian bool                    //是否是小端
+	msgInfo      []*MsgInfo              //消息信息切片 JSON的是用映射存，protobuf的是用切片存
+	msgID        map[reflect.Type]uint16 //消息ID映射
 }
 
 //消息信息类型定义
 type MsgInfo struct {
-	msgType    reflect.Type
-	msgRouter  *chanrpc.Server
-	msgHandler MsgHandlerq
+	msgType    reflect.Type    //消息类型
+	msgRouter  *chanrpc.Server //处理消息的RPC服务器
+	msgHandler MsgHandler      //消息处理函数
 }
 
 //消息处理函数定义
 type MsgHandler func([]interface{})
 
+//创建一个处理器
 func NewProcessor() *Processor {
-	p := new(Processor)
-	p.littleEndian = false
-	p.msgID = make(map[reflect.Type]uint16)
+	p := new(Processor)                     //创建处理器
+	p.littleEndian = false                  //默认大端
+	p.msgID = make(map[reflect.Type]uint16) //创建映射
 	return p
 }
 

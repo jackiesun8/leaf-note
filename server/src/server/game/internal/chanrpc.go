@@ -7,7 +7,7 @@ import (
 )
 
 type AgentInfo struct {
-	accID  string
+	accID  string //acc:account
 	userID int
 }
 
