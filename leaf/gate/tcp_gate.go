@@ -114,7 +114,7 @@ func (a *TCPAgent) OnClose() {
 func (a *TCPAgent) WriteMsg(msg interface{}) {
 	if a.gate.JSONProcessor != nil { //使用JSON处理器
 		// json
-		data, err := a.gate.JSONProcessor.Marshal(msg) //编码JSON消息
+		data, err := a.gate.JSONProcessor.Marshal(msg) //编码JSON消息。消息id存储在data内，直接发送就好了
 		if err != nil {
 			log.Error("marshal json %v error: %v", reflect.TypeOf(msg), err)
 			return
@@ -122,7 +122,7 @@ func (a *TCPAgent) WriteMsg(msg interface{}) {
 		a.conn.WriteMsg(data) //发送消息
 	} else if a.gate.ProtobufProcessor != nil { //使用protobuf处理器
 		// protobuf
-		id, data, err := a.gate.ProtobufProcessor.Marshal(msg.(proto.Message)) //编码protobuf消息
+		id, data, err := a.gate.ProtobufProcessor.Marshal(msg.(proto.Message)) //编码protobuf消息。消息id是返回的，需要和data一起发送到客户端
 		if err != nil {
 			log.Error("marshal protobuf %v error: %v", reflect.TypeOf(msg), err)
 			return

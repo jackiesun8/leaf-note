@@ -108,24 +108,24 @@ func (p *Processor) Route(msg interface{}, userData interface{}) error {
 // goroutine safe
 //解码消息
 func (p *Processor) Unmarshal(data []byte) (interface{}, error) {
-	var m map[string]json.RawMessage
-	err := json.Unmarshal(data, &m)
+	var m map[string]json.RawMessage //存储解码数据。RawMessage is a raw encoded JSON object,used to delay JSON decoding
+	err := json.Unmarshal(data, &m)  //解码
 	if err != nil {
 		return nil, err
 	}
-	if len(m) != 1 {
+	if len(m) != 1 { //m的长度必为1，也就是只有一个key value
 		return nil, errors.New("invalid json data")
 	}
 
-	for msgID, data := range m {
-		i, ok := p.msgInfo[msgID]
+	for msgID, data := range m { //取出msgID和未解码的data
+		i, ok := p.msgInfo[msgID] //取出消息信息
 		if !ok {
 			return nil, fmt.Errorf("message %v not registered", msgID)
 		}
 
 		// msg
-		msg := reflect.New(i.msgType.Elem()).Interface()
-		return msg, json.Unmarshal(data, msg)
+		msg := reflect.New(i.msgType.Elem()).Interface() //存储解码数据，msgType本身为一个Ptr
+		return msg, json.Unmarshal(data, msg)            //解码data
 	}
 
 	panic("bug")
