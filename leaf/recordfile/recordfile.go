@@ -18,11 +18,11 @@ type Index map[interface{}]interface{} //索引类型
 
 //记录文件类型定义
 type RecordFile struct {
-	Comma      rune         //字符类型
-	Comment    rune         //字符类型
-	typeRecord reflect.Type //反射类型
-	records    []interface{}
-	indexes    []Index
+	Comma      rune          //字符类型
+	Comment    rune          //字符类型
+	typeRecord reflect.Type  //反射类型
+	records    []interface{} //记录切片
+	indexes    []Index       //索引切片
 }
 
 //创建一个记录文件,一个记录文件对应一个结构体,一行记录则对应结构体的一个值

@@ -309,6 +309,7 @@ func (c *Client) asynCall(id interface{}, args []interface{}, cb interface{}, n 
 }
 
 //发起异步调用(导出的)
+//异步调用，需要自己写c.Cb(<-c.ChanAsynRet)执行回调
 func (c *Client) AsynCall(id interface{}, _args ...interface{}) {
 	//检查是否提供了回调函数参数，参数个数必定大于等于1
 	if len(_args) < 1 {

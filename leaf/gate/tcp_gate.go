@@ -40,7 +40,7 @@ func (gate *TCPGate) Run(closeSig chan bool) {
 		a.conn = conn      //保存TCP连接
 		a.gate = gate      //保存TCP网关
 
-		if gate.AgentChanRPC != nil {
+		if gate.AgentChanRPC != nil { //代理RPC服务器，用于接受NewAgent和CloseAgentRPC调用
 			gate.AgentChanRPC.Go("NewAgent", a)
 		}
 
